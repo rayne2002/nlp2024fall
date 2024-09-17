@@ -6,8 +6,6 @@ import numpy as np
 
 from util import *
 
-
-
 random.seed(42)
 
 def extract_unigram_features(ex):
@@ -21,7 +19,8 @@ def extract_unigram_features(ex):
         "I love it", "I hate it" --> {"I":2, "it":2, "hate":1, "love":1}
     """
     # BEGIN_YOUR_CODE
-    
+    words = ex['sentence1'] + ex['sentence2']
+    bow_feature = collections.Counter(words)
 
     return bow_feature
     # END_YOUR_CODE
@@ -50,7 +49,17 @@ def learn_predictor(train_data, valid_data, feature_extractor, learning_rate, nu
             feature name (str) : weight (float)
     """
     # BEGIN_YOUR_CODE
-    pass
+    weights = random.random()
+
+    for epoch in num_epochs:
+        for bow in train_data:
+            label = bow['gold_label']   #y_i
+
+            probability = predict(weights,feature_extractor[bow])    #~=f_w(x)
+            gradient = (probability-label) * feature_extractor[bow]
+    
+    increment(weights, -learning_rate, gradient)
+
     # END_YOUR_CODE
 
 def count_cooccur_matrix(tokens, window_size=4):

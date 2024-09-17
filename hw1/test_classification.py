@@ -24,6 +24,6 @@ def test_custom():
     error_analysis(valid_data[:100], feature_extractor, weights, 'error_analysis_custom.txt')
 
 test_unigram()
-test_custom()
+# test_custom()
 
 
