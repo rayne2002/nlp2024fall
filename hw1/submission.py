@@ -54,9 +54,9 @@ def learn_predictor(train_data, valid_data, feature_extractor, learning_rate, nu
     for epoch in num_epochs:
         for bow in train_data:
             label = bow['gold_label']   #y_i
-
-            probability = predict(weights,feature_extractor[bow])    #~=f_w(x)
-            gradient = (probability-label) * feature_extractor[bow]
+            bow_feature = feature_extractor(bow)
+            probability = predict(weights,bow_feature)    #~=f_w(x)
+            gradient = {x_i:(probability-label) * feature for x_i,feature in bow_feature.items()}
     
     increment(weights, -learning_rate, gradient)
 
