@@ -49,15 +49,17 @@ def learn_predictor(train_data, valid_data, feature_extractor, learning_rate, nu
             feature name (str) : weight (float)
     """
     # BEGIN_YOUR_CODE
-    weights = random.random()
-
+    example_features = feature_extractor(train_data[0])
+    weights = {feature: random.random() for feature in example_features}
     for epoch in range(num_epochs):
         for bow in train_data:
             label = bow['gold_label']   #y_i
             bow_feature = feature_extractor(bow)
             probability = predict(weights,bow_feature)    #~=f_w(x)
-            gradient = {x_i:(probability-label) * feature for x_i,feature in bow_feature.items()}
-            increment(weights, -learning_rate, gradient)
+
+            for x_i,feature in bow_feature.items():
+                gradient = {x_i:(probability-label) * feature}
+                increment(weights[x_i], gradient, -learning_rate)
     return weights
     # END_YOUR_CODE
 
