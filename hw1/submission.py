@@ -29,8 +29,17 @@ def extract_custom_features(ex):
     """Design your own features.
     """
     # BEGIN_YOUR_CODE
-    words = ex['sentence1'] + ex['sentence2']
-    bow_feature = collections.Counter(words)
+    def bigram_feature(sentence):
+        bigram_list = []
+        for i in range(len(sentence)-1):
+            bigram_list = bigram_list.append(sentence[i],sentence[i+1])
+        return collections.Counter(bigram_list)
+    #unigram feature extractor
+    bow_feature = extract_unigram_features(ex)
+
+    #update to bigram feature extractor
+    bow_feature.update(bigram_feature(ex['sentence1']))
+    bow_feature.update(bigram_feature(ex['sentence1']))
 
     return bow_feature
     # END_YOUR_CODE
