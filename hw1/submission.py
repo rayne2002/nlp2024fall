@@ -9,7 +9,7 @@ from util import *
 random.seed(42)
 
 def extract_unigram_features(ex):
-    """Return unigrams in the hypothesis and the premise.
+    """Return unigrams in the  
     Parameters:
         ex : dict
             Keys are gold_label (int, optional), sentence1 (list), and sentence2 (list)
@@ -29,7 +29,10 @@ def extract_custom_features(ex):
     """Design your own features.
     """
     # BEGIN_YOUR_CODE
-    pass
+    words = ex['sentence1'] + ex['sentence2']
+    bow_feature = collections.Counter(words)
+
+    return bow_feature
     # END_YOUR_CODE
 
 def learn_predictor(train_data, valid_data, feature_extractor, learning_rate, num_epochs):

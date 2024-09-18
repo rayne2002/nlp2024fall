@@ -9,7 +9,7 @@ def test_unigram():
     predictor = lambda ex: 1 if dot(weights, feature_extractor(ex)) > 0 else 0
     train_err = evaluate_predictor([(ex, ex['gold_label']) for ex in train_data], predictor)
     valid_err = evaluate_predictor([(ex, ex['gold_label']) for ex in valid_data], predictor)
-    print('train error={}, valid error={}'.format(train_err, valid_err))
+    print('train uni error={}, valid uni error={}'.format(train_err, valid_err))
     error_analysis(valid_data[:100], feature_extractor, weights, 'error_analysis_unigram.txt')
 
 def test_custom():
@@ -20,10 +20,10 @@ def test_custom():
     predictor = lambda ex: 1 if dot(weights, feature_extractor(ex)) > 0 else 0
     train_err = evaluate_predictor([(ex, ex['gold_label']) for ex in train_data], predictor)
     valid_err = evaluate_predictor([(ex, ex['gold_label']) for ex in valid_data], predictor)
-    print('train error={}, valid error={}'.format(train_err, valid_err))
+    print('train customer error={}, valid error={}'.format(train_err, valid_err))
     error_analysis(valid_data[:100], feature_extractor, weights, 'error_analysis_custom.txt')
 
 test_unigram()
-# test_custom()
+test_custom()
 
 
