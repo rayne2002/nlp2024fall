@@ -42,7 +42,8 @@ def extract_custom_features(ex):
 
     #update to bigram feature extractor
     bow_feature.update(bigram_feature(ex['sentence1']))
-    bow_feature.update(bigram_feature(ex['sentence1']))
+    bow_feature.update(bigram_feature(ex['sentence2']))
+    bow_feature.update(bigram_feature(ex['sentence2']))
 
     return bow_feature
     # END_YOUR_CODE
