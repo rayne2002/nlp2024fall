@@ -32,7 +32,7 @@ def extract_custom_features(ex):
     def bigram_feature(sentence):
         bigram_list = []
         for i in range(len(sentence)-1):
-            bigram_list.append((sentence[i])+sentence[i+1])
+            bigram_list.append(sentence[i:i+2])
         return collections.Counter(bigram_list)
 
     #unigram feature extractor
