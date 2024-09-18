@@ -59,7 +59,7 @@ def learn_predictor(train_data, valid_data, feature_extractor, learning_rate, nu
 
             for x_i,feature in bow_feature.items():
                 gradient = {x_i:(probability-label) * feature}
-                increment(weights[x_i], gradient, -learning_rate)
+                increment(weights, gradient, -learning_rate)
     return weights
     # END_YOUR_CODE
 
