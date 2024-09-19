@@ -92,7 +92,10 @@ def count_cooccur_matrix(tokens, window_size=4):
             co_mat[i][j] should contain the co-occurrence counts of the words indexed by i and j according to the dictionary word2ind.
     """
     # BEGIN_YOUR_CODE
-    pass
+    
+    
+
+    
     # END_YOUR_CODE
 
 def cooccur_to_embedding(co_mat, embed_size=50):

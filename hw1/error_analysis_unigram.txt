@@ -1,4 +1,4 @@
-================================================================================
+correct================================================================================
 P: A football player tackles an member of the opposing team .
 H: People playing football .
 label=1, predicted=1, correct
