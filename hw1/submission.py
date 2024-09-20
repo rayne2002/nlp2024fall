@@ -63,8 +63,8 @@ def extract_custom_features(ex):
     # return features
     #unigram feature extractor
     bow_feature = extract_unigram_features(ex)
-    print("custom extract.............................................................................")
-    print(dict(bow_feature))
+    # print("custom extract.............................................................................")
+    # print(dict(bow_feature))
     #update to bigram feature extractor
     bow_feature.update(bigram_feature(ex['sentence1']))
     bow_feature.update(bigram_feature(ex['sentence2']))
@@ -91,18 +91,17 @@ def learn_predictor(train_data, valid_data, feature_extractor, learning_rate, nu
             feature name (str) : weight (float)
     """
     # BEGIN_YOUR_CODE
-    example_features = feature_extractor(train_data[0])
-    weights = {feature: random.random() for feature in example_features}
+    weights = collections.defaultdict(float)
     for epoch in range(num_epochs):
         # print(f"Starting epoch {epoch + 1}...")
-        # random.shuffle(train_data)
+        random.shuffle(train_data)
         for bow in train_data:
             label = bow['gold_label']   #y_i
             bow_feature = feature_extractor(bow)
             probability = predict(weights,bow_feature)    #~=f_w(x)
 
-            gradient = gradient = {f: (probability - label) * bow_feature[f] for f in bow_feature}
-            increment(weights, gradient, -learning_rate*(probability - label))
+            gradient = {f: (probability - label) * bow_feature[f] for f in bow_feature}
+            increment(weights, gradient, -learning_rate)
     return dict(weights)
     # END_YOUR_CODE
     
