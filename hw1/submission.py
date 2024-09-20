@@ -21,10 +21,17 @@ def extract_unigram_features(ex):
         "I love it", "I hate it" --> {"I":2, "it":2, "hate":1, "love":1}
     """
     # BEGIN_YOUR_CODE
-    words = ex['sentence1'] + ex['sentence2']
-    print(words)
-    bow_feature = collections.Counter(words)
-    return dict(bow_feature)
+    # words = ex['sentence1'] + ex['sentence2']
+    # # print(words)
+    # bow_feature = collections.Counter(words)
+    # return dict(bow_feature)
+    premise = ex['sentence1']
+    hypothesis = ex['sentence2']
+    whole = premise + hypothesis
+    whole_counts = collections.Counter(whole)
+    counter_dict = dict(whole_counts)
+    
+    return counter_dict
     # END_YOUR_CODE
 
 def extract_custom_features(ex):
