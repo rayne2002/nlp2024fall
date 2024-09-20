@@ -40,27 +40,27 @@ def extract_custom_features(ex):
 
     
     
-    # Initialize feature dictionary
-    features = defaultdict(float)
+    # # Initialize feature dictionary
+    # features = defaultdict(float)
     
-    # Preprocess the sentences
-    premise = ex['sentence1']
-    hypothesis = ex['sentence2']
-    premise = [word.lower() for word in premise if word.lower()]
-    hypothesis = [word.lower() for word in hypothesis if word.lower()]
+    # # Preprocess the sentences
+    # premise = ex['sentence1']
+    # hypothesis = ex['sentence2']
+    # premise = [word.lower() for word in premise if word.lower()]
+    # hypothesis = [word.lower() for word in hypothesis if word.lower()]
     
-    # Extract Unigram Features
-    unigram_features = Counter(ngrams(premise + hypothesis, 1))
-    for unigram, count in unigram_features.items():
-        features[unigram] += count
+    # # Extract Unigram Features
+    # unigram_features = Counter(ngrams(premise + hypothesis, 1))
+    # for unigram, count in unigram_features.items():
+    #     features[unigram] += count
         
-    # Extract Bigram Features
-    bigram_features = Counter(ngrams(premise + hypothesis, 2))
-    for bigram, count in bigram_features.items():
-        features[bigram] += count
+    # # Extract Bigram Features
+    # bigram_features = Counter(ngrams(premise + hypothesis, 2))
+    # for bigram, count in bigram_features.items():
+    #     features[bigram] += count
     
     
-    return features
+    # return features
     #unigram feature extractor
     bow_feature = extract_unigram_features(ex)
     print("custom extract.............................................................................")
