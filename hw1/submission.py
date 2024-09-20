@@ -168,30 +168,23 @@ def top_k_similar(word_index, embeddings, word2ind, k=10, metric='dot'):
     if metric == 'dot':
         similarities = np.dot(embeddings, embeddings[word_index])
         
-        top_k_indices = np.argsort(similarities)[::-1][1:k+1]  # Skip the first one as it will be the word itself
+        top_k_indices = np.argsort(similarities)[::-1][1:k+1]
         
-        # Map indices back to words
         ind2word = {index: word for word, index in word2ind.items()}
         top_k_words = [ind2word[idx] for idx in top_k_indices]
         
         return top_k_words
     elif metric == 'cosine':
-        # Cosine similarity
         target_vector = embeddings[word_index]
         
-        # Compute the dot product of the target word vector with all word vectors
         dot_products = np.dot(embeddings, target_vector)
         
-        # Compute the norms (magnitudes) of all word vectors
         norms = np.linalg.norm(embeddings, axis=1)
         
-        # Compute the cosine similarities
         similarities = dot_products / (norms * np.linalg.norm(target_vector))
     
-        # Get the indices of the top k - 1 most similar words (excluding the word itself)
         top_k_indices = np.argsort(similarities)[::-1][1:k+1]  # Skip the word itself
         
-        # Map indices back to words
         ind2word = {index: word for word, index in word2ind.items()}
         top_k_words = [ind2word[idx] for idx in top_k_indices]
         
