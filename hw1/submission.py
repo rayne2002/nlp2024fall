@@ -63,13 +63,9 @@ def extract_custom_features(ex):
     # return features
     #unigram feature extractor
     bow_feature = extract_unigram_features(ex)
-    # print("custom extract.............................................................................")
-    # print(dict(bow_feature))
     #update to bigram feature extractor
     bow_feature.update(bigram_feature(ex['sentence1']))
     bow_feature.update(bigram_feature(ex['sentence2']))
-    print("custom extract after update.............................................................................")
-    print((bow_feature))
  
     return bow_feature
     # END_YOUR_CODE
