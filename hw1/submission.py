@@ -22,7 +22,7 @@ def extract_unigram_features(ex):
     words = ex['sentence1'] + ex['sentence2']
     bow_feature = collections.Counter(words)
 
-    return bow_feature
+    return dict(bow_feature)
     # END_YOUR_CODE
 
 def extract_custom_features(ex):
@@ -66,6 +66,7 @@ def learn_predictor(train_data, valid_data, feature_extractor, learning_rate, nu
     example_features = feature_extractor(train_data[0])
     weights = {feature: random.random() for feature in example_features}
     for epoch in range(num_epochs):
+        # print(f"Starting epoch {epoch + 1}...")
         for bow in train_data:
             label = bow['gold_label']   #y_i
             bow_feature = feature_extractor(bow)
@@ -95,7 +96,7 @@ def count_cooccur_matrix(tokens, window_size=4):
     word2ind = {word: idx for idx, word in enumerate(sorted(set(tokens)))}
     
     # Initialize the co-occurrence matrix with zeros
-    co_mat = np.zeros((len(word2ind), len(word2ind)), dtype=int)
+    co_mat = np.zeros((len(word2ind), len(word2ind)), dtype=np.int32)
     
     # Length of the token list
     n_tokens = len(tokens)
