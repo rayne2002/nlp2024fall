@@ -1,3 +1,4 @@
+#%%
 from submission import count_cooccur_matrix, cooccur_to_embedding, top_k_similar
 from util import *
 
@@ -12,7 +13,9 @@ def test_embedding(words=['man', 'woman', 'happy', 'sad', 'emma', 'knightley']):
         #     top_k_words = []
         print('top k most similar words to', word)
         print(' '.join(top_k_words))
-
+#%%
 test_embedding()
 
 
+
+# %%

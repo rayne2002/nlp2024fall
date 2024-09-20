@@ -20,8 +20,9 @@ def extract_unigram_features(ex):
     """
     # BEGIN_YOUR_CODE
     words = ex['sentence1'] + ex['sentence2']
+    print(words)
     bow_feature = collections.Counter(words)
-
+    print(dict(bow_feature))
     return dict(bow_feature)
     # END_YOUR_CODE
 
@@ -38,11 +39,14 @@ def extract_custom_features(ex):
 
     #unigram feature extractor
     bow_feature = extract_unigram_features(ex)
-
+    print("custom extract.............................................................................")
+    print(dict(bow_feature))
     #update to bigram feature extractor
     bow_feature.update(bigram_feature(ex['sentence1']))
     bow_feature.update(bigram_feature(ex['sentence2']))
-
+    print("custom extract after update.............................................................................")
+    print((bow_feature))
+ 
     return bow_feature
     # END_YOUR_CODE
 
@@ -171,30 +175,26 @@ def top_k_similar(word_index, embeddings, word2ind, k=10, metric='dot'):
         top_k_words = [ind2word[idx] for idx in top_k_indices]
         
         return top_k_words
-    # if metric == 'dot':
-    #     # Dot product similarity (as implemented earlier)
-    #     similarities = np.dot(embeddings, embeddings[word_index])
-    
-    # elif metric == 'cosine':
-    #     # Cosine similarity
-    #     target_vector = embeddings[word_index]
+    elif metric == 'cosine':
+        # Cosine similarity
+        target_vector = embeddings[word_index]
         
-    #     # Compute the dot product of the target word vector with all word vectors
-    #     dot_products = np.dot(embeddings, target_vector)
+        # Compute the dot product of the target word vector with all word vectors
+        dot_products = np.dot(embeddings, target_vector)
         
-    #     # Compute the norms (magnitudes) of all word vectors
-    #     norms = np.linalg.norm(embeddings, axis=1)
+        # Compute the norms (magnitudes) of all word vectors
+        norms = np.linalg.norm(embeddings, axis=1)
         
-    #     # Compute the cosine similarities
-    #     similarities = dot_products / (norms * np.linalg.norm(target_vector))
+        # Compute the cosine similarities
+        similarities = dot_products / (norms * np.linalg.norm(target_vector))
     
-    # # Get the indices of the top k - 1 most similar words (excluding the word itself)
-    # top_k_indices = np.argsort(similarities)[::-1][1:k+1]  # Skip the word itself
-    
-    # # Map indices back to words
-    # ind2word = {index: word for word, index in word2ind.items()}
-    # top_k_words = [ind2word[idx] for idx in top_k_indices]
-    
-    # return top_k_words
+        # Get the indices of the top k - 1 most similar words (excluding the word itself)
+        top_k_indices = np.argsort(similarities)[::-1][1:k+1]  # Skip the word itself
+        
+        # Map indices back to words
+        ind2word = {index: word for word, index in word2ind.items()}
+        top_k_words = [ind2word[idx] for idx in top_k_indices]
+        
+    return top_k_words
 
     # END_YOUR_CODE
