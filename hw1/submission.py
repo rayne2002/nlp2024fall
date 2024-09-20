@@ -21,17 +21,10 @@ def extract_unigram_features(ex):
         "I love it", "I hate it" --> {"I":2, "it":2, "hate":1, "love":1}
     """
     # BEGIN_YOUR_CODE
-    # words = ex['sentence1'] + ex['sentence2']
-    # # print(words)
-    # bow_feature = collections.Counter(words)
-    # return dict(bow_feature)
-    premise = ex['sentence1']
-    hypothesis = ex['sentence2']
-    whole = premise + hypothesis
-    whole_counts = collections.Counter(whole)
-    counter_dict = dict(whole_counts)
-    
-    return counter_dict
+    words = ex['sentence1'] + ex['sentence2']
+    # print(words)
+    bow_feature = collections.Counter(words)
+    return dict(bow_feature)
     # END_YOUR_CODE
 
 def extract_custom_features(ex):
@@ -124,10 +117,10 @@ def count_cooccur_matrix(tokens, window_size=4):
             co_mat[i][j] should contain the co-occurrence counts of the words indexed by i and j according to the dictionary word2ind.
     """
     # BEGIN_YOUR_CODE
-    word2ind = {word: idx for idx, word in enumerate(sorted(set(tokens)))}
+    word2ind = {word: idx for idx, word in enumerate((set(tokens)))}
     
     # Initialize the co-occurrence matrix with zeros
-    co_mat = np.zeros((len(word2ind), len(word2ind)), dtype=np.int32)
+    co_mat = np.zeros((len(word2ind), len(word2ind)), dtype=np.int)
     
     # Length of the token list
     n_tokens = len(tokens)
@@ -143,9 +136,9 @@ def count_cooccur_matrix(tokens, window_size=4):
         
         # Iterate over the window around the current word
         for j in range(left_bound, right_bound):
-            if i != j:  # Don't count the word co-occurring with itself
+            if i != j: 
                 neighbor_idx = word2ind[tokens[j]]
-                co_mat[center_idx, neighbor_idx] += 1
+                co_mat[center_idx][neighbor_idx] += 1
                 
     return word2ind, co_mat
 
