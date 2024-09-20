@@ -5,6 +5,8 @@ import random
 import numpy as np
 
 from util import *
+import nltk
+from nltk import ngrams
 
 random.seed(42)
 
@@ -22,7 +24,6 @@ def extract_unigram_features(ex):
     words = ex['sentence1'] + ex['sentence2']
     print(words)
     bow_feature = collections.Counter(words)
-    print(dict(bow_feature))
     return dict(bow_feature)
     # END_YOUR_CODE
 
@@ -37,6 +38,29 @@ def extract_custom_features(ex):
             bigram_list.append(bigram)
         return collections.Counter(bigram_list)
 
+    
+    
+    # Initialize feature dictionary
+    features = defaultdict(float)
+    
+    # Preprocess the sentences
+    premise = ex['sentence1']
+    hypothesis = ex['sentence2']
+    premise = [word.lower() for word in premise if word.lower()]
+    hypothesis = [word.lower() for word in hypothesis if word.lower()]
+    
+    # Extract Unigram Features
+    unigram_features = Counter(ngrams(premise + hypothesis, 1))
+    for unigram, count in unigram_features.items():
+        features[unigram] += count
+        
+    # Extract Bigram Features
+    bigram_features = Counter(ngrams(premise + hypothesis, 2))
+    for bigram, count in bigram_features.items():
+        features[bigram] += count
+    
+    
+    return features
     #unigram feature extractor
     bow_feature = extract_unigram_features(ex)
     print("custom extract.............................................................................")
@@ -71,16 +95,17 @@ def learn_predictor(train_data, valid_data, feature_extractor, learning_rate, nu
     weights = {feature: random.random() for feature in example_features}
     for epoch in range(num_epochs):
         # print(f"Starting epoch {epoch + 1}...")
+        # random.shuffle(train_data)
         for bow in train_data:
             label = bow['gold_label']   #y_i
             bow_feature = feature_extractor(bow)
             probability = predict(weights,bow_feature)    #~=f_w(x)
 
-            for x_i,feature in bow_feature.items():
-                gradient = {x_i:(probability-label) * feature}
-                increment(weights, gradient, -learning_rate)
-    return weights
+            gradient = gradient = {f: (probability - label) * bow_feature[f] for f in bow_feature}
+            increment(weights, gradient, -learning_rate*(probability - label))
+    return dict(weights)
     # END_YOUR_CODE
+    
 
 def count_cooccur_matrix(tokens, window_size=4):
     """Compute the co-occurrence matrix given a sequence of tokens.
