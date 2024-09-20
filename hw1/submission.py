@@ -92,10 +92,32 @@ def count_cooccur_matrix(tokens, window_size=4):
             co_mat[i][j] should contain the co-occurrence counts of the words indexed by i and j according to the dictionary word2ind.
     """
     # BEGIN_YOUR_CODE
+    word2ind = {word: idx for idx, word in enumerate(sorted(set(tokens)))}
     
+    # Initialize the co-occurrence matrix with zeros
+    co_mat = np.zeros((len(word2ind), len(word2ind)), dtype=int)
     
+    # Length of the token list
+    n_tokens = len(tokens)
+    
+    # Build the co-occurrence matrix
+    for i, token in enumerate(tokens):
+        # Current word index
+        center_idx = word2ind[token]
+        
+        # Calculate the bounds for the window around the current word
+        left_bound = max(0, i - window_size)
+        right_bound = min(n_tokens, i + window_size + 1)
+        
+        # Iterate over the window around the current word
+        for j in range(left_bound, right_bound):
+            if i != j:  # Don't count the word co-occurring with itself
+                neighbor_idx = word2ind[tokens[j]]
+                co_mat[center_idx, neighbor_idx] += 1
+                
+    return word2ind, co_mat
 
-    
+
     # END_YOUR_CODE
 
 def cooccur_to_embedding(co_mat, embed_size=50):
@@ -109,10 +131,18 @@ def cooccur_to_embedding(co_mat, embed_size=50):
             vocab_size x embed_size
     """
     # BEGIN_YOUR_CODE
-    pass
+    U, s, Vt = np.linalg.svd(co_mat)
+    
+    U_k = U[:, :embed_size]
+    s_k = s[:embed_size]
+    
+    S_k_diag = np.diag(np.sqrt(s_k))
+    embeddings = np.dot(U_k, S_k_diag)
+    
+    return embeddings
     # END_YOUR_CODE
 
-def top_k_similar(word_ind, embeddings, word2ind, k=10, metric='dot'):
+def top_k_similar(word_index, embeddings, word2ind, k=10, metric='dot'):
     """Return the top k most similar words to the given word (excluding itself).
     You will implement two similarity functions.
     If metric='dot', use the dot product.
@@ -130,5 +160,40 @@ def top_k_similar(word_ind, embeddings, word2ind, k=10, metric='dot'):
         topk-words : [str]
     """
     # BEGIN_YOUR_CODE
-    pass
+    if metric == 'dot':
+        similarities = np.dot(embeddings, embeddings[word_index])
+        
+        top_k_indices = np.argsort(similarities)[::-1][1:k+1]  # Skip the first one as it will be the word itself
+        
+        # Map indices back to words
+        ind2word = {index: word for word, index in word2ind.items()}
+        top_k_words = [ind2word[idx] for idx in top_k_indices]
+        
+        return top_k_words
+    # if metric == 'dot':
+    #     # Dot product similarity (as implemented earlier)
+    #     similarities = np.dot(embeddings, embeddings[word_index])
+    
+    # elif metric == 'cosine':
+    #     # Cosine similarity
+    #     target_vector = embeddings[word_index]
+        
+    #     # Compute the dot product of the target word vector with all word vectors
+    #     dot_products = np.dot(embeddings, target_vector)
+        
+    #     # Compute the norms (magnitudes) of all word vectors
+    #     norms = np.linalg.norm(embeddings, axis=1)
+        
+    #     # Compute the cosine similarities
+    #     similarities = dot_products / (norms * np.linalg.norm(target_vector))
+    
+    # # Get the indices of the top k - 1 most similar words (excluding the word itself)
+    # top_k_indices = np.argsort(similarities)[::-1][1:k+1]  # Skip the word itself
+    
+    # # Map indices back to words
+    # ind2word = {index: word for word, index in word2ind.items()}
+    # top_k_words = [ind2word[idx] for idx in top_k_indices]
+    
+    # return top_k_words
+
     # END_YOUR_CODE

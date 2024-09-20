@@ -8,6 +8,8 @@ def test_embedding(words=['man', 'woman', 'happy', 'sad', 'emma', 'knightley']):
     for word in words:
         word_ind = word2ind[word]
         top_k_words = top_k_similar(word_ind, embeddings, word2ind, k=10, metric='cosine')
+        # if not isinstance(top_k_words, list):  # Ensure top_k_words is a list
+        #     top_k_words = []
         print('top k most similar words to', word)
         print(' '.join(top_k_words))
 
