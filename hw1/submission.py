@@ -22,7 +22,6 @@ def extract_unigram_features(ex):
     """
     # BEGIN_YOUR_CODE
     words = ex['sentence1'] + ex['sentence2']
-    # print(words)
     bow_feature = collections.Counter(words)
     return dict(bow_feature)
     # END_YOUR_CODE
@@ -37,30 +36,6 @@ def extract_custom_features(ex):
             bigram = (sentence[i], sentence[i+1])
             bigram_list.append(bigram)
         return collections.Counter(bigram_list)
-
-    
-    
-    # # Initialize feature dictionary
-    # features = defaultdict(float)
-    
-    # # Preprocess the sentences
-    # premise = ex['sentence1']
-    # hypothesis = ex['sentence2']
-    # premise = [word.lower() for word in premise if word.lower()]
-    # hypothesis = [word.lower() for word in hypothesis if word.lower()]
-    
-    # # Extract Unigram Features
-    # unigram_features = Counter(ngrams(premise + hypothesis, 1))
-    # for unigram, count in unigram_features.items():
-    #     features[unigram] += count
-        
-    # # Extract Bigram Features
-    # bigram_features = Counter(ngrams(premise + hypothesis, 2))
-    # for bigram, count in bigram_features.items():
-    #     features[bigram] += count
-    
-    
-    # return features
     #unigram feature extractor
     bow_feature = extract_unigram_features(ex)
     #update to bigram feature extractor
@@ -120,7 +95,7 @@ def count_cooccur_matrix(tokens, window_size=4):
     word2ind = {word: idx for idx, word in enumerate((set(tokens)))}
     
     # Initialize the co-occurrence matrix with zeros
-    co_mat = np.zeros((len(word2ind), len(word2ind)), dtype=np.int)
+    co_mat = np.zeros((len(word2ind), len(word2ind)), dtype=int)
     
     # Length of the token list
     n_tokens = len(tokens)
@@ -156,13 +131,13 @@ def cooccur_to_embedding(co_mat, embed_size=50):
             vocab_size x embed_size
     """
     # BEGIN_YOUR_CODE
-    U, s, Vt = np.linalg.svd(co_mat)
-    
+    # U, s, Vt = np.linalg.svd(co_mat)
+    U, s, Vt = np.linalg.svd(co_mat, full_matrices=False, hermitian = True)
     U_k = U[:, :embed_size]
     s_k = s[:embed_size]
     
-    S_k_diag = np.diag(np.sqrt(s_k))
-    embeddings = np.dot(U_k, S_k_diag)
+    S_k_diag = np.diag(s_k)
+    embeddings = np.matmul(U_k, S_k_diag)
     
     return embeddings
     # END_YOUR_CODE
@@ -187,13 +162,13 @@ def top_k_similar(word_index, embeddings, word2ind, k=10, metric='dot'):
     # BEGIN_YOUR_CODE
     if metric == 'dot':
         similarities = np.dot(embeddings, embeddings[word_index])
-        
-        top_k_indices = np.argsort(similarities)[::-1][1:k+1]
-        
+        top_k_indices = np.argsort(similarities)[-k:][::-1]        
         ind2word = {index: word for word, index in word2ind.items()}
         top_k_words = [ind2word[idx] for idx in top_k_indices]
         
         return top_k_words
+        
+     
     elif metric == 'cosine':
         target_vector = embeddings[word_index]
         
