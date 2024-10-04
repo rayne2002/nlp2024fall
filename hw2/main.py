@@ -18,7 +18,7 @@ import spacy
 import GPUtil
 import warnings
 import torch.multiprocessing as mp
-from utils import *
+from hw2.utils import *
 from layers import *
 from transformer import *
 

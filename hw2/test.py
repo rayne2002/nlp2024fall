@@ -56,7 +56,7 @@ def test_multiheaded_attention():
 
 def test_positional_encoding():
     
-    from utils import PositionalEncoding
+    from hw2.utils import PositionalEncoding
     position = PositionalEncoding(d_model=10, dropout=0.5)
     pos_1 = torch.tensor([8.4147e-01,  5.4030e-01,  1.5783e-01,  9.8747e-01,  2.5116e-02,
            9.9968e-01,  3.9811e-03,  9.9999e-01,  6.3096e-04,  1.0000e+00])
