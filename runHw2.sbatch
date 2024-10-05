@@ -10,4 +10,4 @@
 module purge
 module load python/intel/3.8.6
 
-python ./main.py
+python .~/main.py
