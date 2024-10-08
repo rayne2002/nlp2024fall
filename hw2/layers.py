@@ -149,6 +149,9 @@ class MultiHeadedAttention(nn.Module):
         
         # Step 3: Concatenate the results from all heads and apply a final linear projection
         x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
+        
+        print("Attention output shape:", x.shape)
+
         return self.linears[-1](x)
     
     
