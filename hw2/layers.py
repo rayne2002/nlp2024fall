@@ -34,7 +34,22 @@ class SublayerConnection(nn.Module):
 
     def forward(self, x, sublayer):
         "Apply residual connection to any sublayer with the same size."
-        return x + self.dropout(sublayer(self.norm(x)))
+        print("Shape of input x:", x.shape)  # Print the initial shape of x
+
+        norm_x = self.norm(x)
+        print("Shape after LayerNorm:", norm_x.shape)  # Check the shape after normalization
+
+        sublayer_x = sublayer(norm_x)
+        print("Shape after sublayer:", sublayer_x.shape)  # Check the shape after the sublayer
+
+        dropout_x = self.dropout(sublayer_x)
+        print("Shape after Dropout:", dropout_x.shape)  # Check the shape after applying dropout
+
+        output = x + dropout_x
+        print("Shape of output:", output.shape)  # Final output shape after addition
+
+        return output
+        # return x + self.dropout(sublayer(self.norm(x)))
     
     
 class EncoderLayer(nn.Module):
