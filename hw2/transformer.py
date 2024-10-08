@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from hw2.utils import clones
+from utils import clones
 from layers import *
 
 
