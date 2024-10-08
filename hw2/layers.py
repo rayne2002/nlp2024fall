@@ -126,32 +126,30 @@ class MultiHeadedAttention(nn.Module):
         ]
 
      
-        batch_size = query.size(0)
-        if mask is not None:
-            mask = mask.unsqueeze(1)  # Same mask applied to all heads
-            attn_output, attn_output_weights = attention(query, key, value, mask=mask, dropout=self.dropout)
-
-        # Concatenate and process the output from all heads
-        attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
-        return self.linears[-1](attn_output)  # Final linear layer after attention
-
+        # batch_size = query.size(0)
         # if mask is not None:
-        #     # Same mask applied to all heads.
-        #     mask = mask.unsqueeze(1)
-        # # Step 1: Linear projections for query, key, value
-        # query, key, value = [
-        #     lin(x).view(batch_size, -1, self.h, self.d_k).transpose(1, 2)
-        #     for lin, x in zip(self.linears, (query, key, value))
-        # ]
+        #     mask = mask.unsqueeze(1)  # Same mask applied to all heads
+        #     attn_output, attn_output_weights = attention(query, key, value, mask=mask, dropout=self.dropout)
+
+        # # Concatenate and process the output from all heads
+        # attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
+        # return self.linears[-1](attn_output)  # Final linear layer after attention
+
+        if mask is not None:
+            # Same mask applied to all heads.
+            mask = mask.unsqueeze(1)
+        # Step 1: Linear projections for query, key, value
+        query, key, value = [
+            lin(x).view(batch_size, -1, self.h, self.d_k).transpose(1, 2)
+            for lin, x in zip(self.linears, (query, key, value))
+        ]
         
-        # # Step 2: Apply the attention function (attention() defined earlier)
-        # x, self.attn = attention(query, key, value, mask=mask, dropout=self.dropout)
+        # Step 2: Apply the attention function (attention() defined earlier)
+        x, self.attn = attention(query, key, value, mask=mask, dropout=self.dropout)
         
-        # # Step 3: Concatenate the results from all heads and apply a final linear projection
-        # x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
-        
-        # # Step 4: Apply final linear layer to combine the outputs
-        # return self.linears[-1](x)
+        # Step 3: Concatenate the results from all heads and apply a final linear projection
+        x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
+        return self.linears[-1](x)
     
     
 class PositionwiseFeedForward(nn.Module):
