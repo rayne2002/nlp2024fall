@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import math
 from utils import clones
 from torch.nn.functional import log_softmax
@@ -33,6 +34,15 @@ class SublayerConnection(nn.Module):
 
     def forward(self, x, sublayer):
         "Apply residual connection to any sublayer with the same size."
+        # !!!
+        sublayer_output = sublayer(self.norm(x))
+
+        if x.size(1) != sublayer_output.size(1):
+            if x.size(1) < sublayer_output.size(1):
+                sublayer_output = sublayer_output[:, :x.size(1), :]  
+            else:
+                x = x[:, :sublayer_output.size(1), :]  
+        #!!!
         return x + self.dropout(sublayer(self.norm(x)))
     
     
@@ -51,7 +61,7 @@ class EncoderLayer(nn.Module):
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, mask))
         return self.sublayer[1](x, self.feed_forward)
     
-    
+   
 class DecoderLayer(nn.Module):
     "Decoder is made of self-attn, src-attn, and feed forward (defined below)"
 
@@ -71,60 +81,56 @@ class DecoderLayer(nn.Module):
     
     
 def attention(query, key, value, mask=None, dropout=None):
-    d_k = query.size(-1)
-    # Compute attention scores (batch_size, head_count, seq_len, seq_len)
-    scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
+    # Your code here
+
+    d_k = query.size(-1) 
+    scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)  # Scaled by sqrt(d_k)
     
-    # Apply the mask (if provided) by setting masked positions to a large negative value
     if mask is not None:
-        # Ensure the mask is broadcastable by adding dimensions if necessary
-        mask = mask.unsqueeze(1)  # Make sure mask is (batch_size, 1, 1, seq_len)
+        mask = mask.unsqueeze(1)  # Add a new dimension at index 1 for the heads
         scores = scores.masked_fill(mask == 0, -1e9)
     
-    # Apply softmax to get attention weights
-    attn_weights = torch.softmax(scores, dim=-1)
-    
-    # Apply dropout to attention weights (if dropout is provided)
+    # attn = F.softmax(scores, dim=-1)
+    attn = torch.softmax(scores, dim=-1) #!!!
     if dropout is not None:
-        attn_weights = dropout(attn_weights)
+        attn = dropout(attn)
     
-    # Compute the final output by multiplying attention weights with value vectors
-    output = torch.matmul(attn_weights, value)
+    output = torch.matmul(attn, value)
     
-    return output, attn_weights
-
+    return output, attn
 
 class MultiHeadedAttention(nn.Module):
     def __init__(self, h, d_model, dropout=0.1):
+        # Your code here
+        "Initialize the multi-headed attention mechanism."
         super(MultiHeadedAttention, self).__init__()
-        assert d_model % h == 0  # Ensure d_model is divisible by number of heads
-        self.d_k = d_model // h  # Dimensionality of each head
+        assert d_model % h == 0
+        self.d_k = d_model // h
         self.h = h  # Number of attention heads
-        self.linears = clones(nn.Linear(d_model, d_model), 4)  # Linear layers for query, key, value, and output
-        self.attn = None  # To store the attention weights
+        # self.linears = nn.ModuleList([nn.Linear(d_model, d_model) for _ in range(4)])
+        self.linears = clones(nn.Linear(d_model, d_model), 4)  # !!!Linear layers for query, key, value, and output
+        self.attn = None
         self.dropout = nn.Dropout(p=dropout)
 
+
     def forward(self, query, key, value, mask=None):
+        # Your code here
+        "Implements the forward pass of multi-headed attention."
         if mask is not None:
-            # Same mask for all heads
             mask = mask.unsqueeze(1)
 
-        n_batches = query.size(0)
+        batch_size = query.size(0)
 
-        # 1) Apply the linear layers to query, key, value and split into multiple heads
         query, key, value = [
-            l(x).view(n_batches, -1, self.h, self.d_k).transpose(1, 2)
-            for l, x in zip(self.linears, (query, key, value))
+            lin(x).view(batch_size, -1, self.h, self.d_k).transpose(1, 2)
+            for lin, x in zip(self.linears, (query, key, value))
         ]
 
-        # 2) Compute scaled dot-product attention
+     
         x, self.attn = attention(query, key, value, mask=mask, dropout=self.dropout)
+        x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
+        return self.linears[-1](x)  # Final linear layer after attention
 
-        # 3) Concatenate heads and apply the final linear layer
-        x = x.transpose(1, 2).contiguous().view(n_batches, -1, self.h * self.d_k)
-        return self.linears[-1](x)
-    
-    
     
 class PositionwiseFeedForward(nn.Module):
     "Implements FFN equation."
