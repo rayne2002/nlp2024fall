@@ -105,7 +105,7 @@ class MultiHeadedAttention(nn.Module):
         self.h = h  # Number of attention heads
         self.linears = nn.ModuleList([nn.Linear(d_model, d_model) for _ in range(4)])
         self.attn = None
-        self.d_model = d_model  # Dimension of the model (input/output)
+        # self.d_model = d_model  # Dimension of the model (input/output)
         self.dropout = nn.Dropout(p=dropout)
 
 
@@ -127,8 +127,8 @@ class MultiHeadedAttention(nn.Module):
         x, self.attn = attention(query, key, value, mask=mask, dropout=self.dropout)
         # Concatenate and process the output from all heads
         # attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
-        x = x.transpose(1, 2).contiguous().view(n_batches, -1, self.h * self.d_k)
-        return self.linears[-1](attn_output)  # Final linear layer after attention
+        x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
+        return self.linears[-1](x)  # Final linear layer after attention
 
     
 class PositionwiseFeedForward(nn.Module):
