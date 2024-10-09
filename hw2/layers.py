@@ -129,7 +129,7 @@ class MultiHeadedAttention(nn.Module):
         batch_size = query.size(0)
         if mask is not None:
             mask = mask.unsqueeze(1)  # Same mask applied to all heads
-            attn_output, attn_output_weights = attention(query, key, value, mask=mask, dropout=self.dropout)
+        attn_output, attn_output_weights = attention(query, key, value, mask=mask, dropout=self.dropout)
 
         # Concatenate and process the output from all heads
         attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
