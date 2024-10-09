@@ -5,6 +5,7 @@ import torch.nn as nn
 from torch.nn.functional import pad
 import sacrebleu
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 ## Dummy functions defined to use the same function run_epoch() during eval
 class DummyOptimizer(torch.optim.Optimizer):
