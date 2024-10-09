@@ -52,7 +52,7 @@ class EncoderLayer(nn.Module):
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, mask))
         return self.sublayer[1](x, self.feed_forward)
     
-    
+   
 class DecoderLayer(nn.Module):
     "Decoder is made of self-attn, src-attn, and feed forward (defined below)"
 
@@ -74,23 +74,18 @@ class DecoderLayer(nn.Module):
 def attention(query, key, value, mask=None, dropout=None):
     # Your code here
 
-    d_k = query.size(-1)  # Get the dimension of the keys
+    d_k = query.size(-1) 
     scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)  # Scaled by sqrt(d_k)
     
-    # Step 2: Apply the mask (if any) by filling the masked positions with a large negative number
     if mask is not None:
-    # Ensure that the mask has the same shape as the scores
         mask = mask.unsqueeze(1)  # Add a new dimension at index 1 for the heads
         scores = scores.masked_fill(mask == 0, -1e9)
     
-    # Step 3: Apply the softmax function to get the attention weights
-    attn = F.softmax(scores, dim=-1)
-    
-    # Step 4: Apply dropout (if any)
+    # attn = F.softmax(scores, dim=-1)
+    attn = torch.softmax(scores, dim=-1) #!!!
     if dropout is not None:
         attn = dropout(attn)
     
-    # Step 5: Multiply the attention weights by the value matrix to get the final output
     output = torch.matmul(attn, value)
     
     return output, attn
@@ -103,9 +98,9 @@ class MultiHeadedAttention(nn.Module):
         assert d_model % h == 0
         self.d_k = d_model // h
         self.h = h  # Number of attention heads
-        self.linears = nn.ModuleList([nn.Linear(d_model, d_model) for _ in range(4)])
+        # self.linears = nn.ModuleList([nn.Linear(d_model, d_model) for _ in range(4)])
+        self.linears = clones(nn.Linear(d_model, d_model), 4)  # !!!Linear layers for query, key, value, and output
         self.attn = None
-        # self.d_model = d_model  # Dimension of the model (input/output)
         self.dropout = nn.Dropout(p=dropout)
 
 
@@ -113,7 +108,6 @@ class MultiHeadedAttention(nn.Module):
         # Your code here
         "Implements the forward pass of multi-headed attention."
         if mask is not None:
-            # Same mask for all heads
             mask = mask.unsqueeze(1)
 
         batch_size = query.size(0)
@@ -125,8 +119,6 @@ class MultiHeadedAttention(nn.Module):
 
      
         x, self.attn = attention(query, key, value, mask=mask, dropout=self.dropout)
-        # Concatenate and process the output from all heads
-        # attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
         x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
         return self.linears[-1](x)  # Final linear layer after attention
 

@@ -5,7 +5,7 @@ import torch
 
 def test_attention():
     
-    from layers import attention
+    from hw2.layers_yang import attention
     
     d_k = 10
     d_v = 15
@@ -30,7 +30,7 @@ def test_attention():
 
 def test_multiheaded_attention():
     
-    from layers import MultiHeadedAttention
+    from hw2.layers_yang import MultiHeadedAttention
     
     d_k = 16
     d_v = 16

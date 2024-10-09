@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from utils import clones
-from layers import *
+from hw2.layers_yang import *
 
 
 class EncoderDecoder(nn.Module):

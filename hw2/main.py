@@ -19,7 +19,7 @@ import GPUtil
 import warnings
 import torch.multiprocessing as mp
 from utils import *
-from layers import *
+from hw2.layers_yang import *
 from transformer import *
 
 warnings.filterwarnings("ignore")
