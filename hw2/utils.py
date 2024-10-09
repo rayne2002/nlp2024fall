@@ -90,7 +90,52 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
 
 def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, end_idx):
     # Your code here
-    pass  # Add this line or implement the constructor properly    
+    memory = model.encode(src, src_mask)
+
+    # Initiate beam search with a single sequence containing only the start symbol
+    beam = [(torch.tensor([start_symbol], dtype=torch.long), 0)]  # Each element is a tuple (sequence, score)
+    completed_sq = []
+
+    # Execute the loop until the sequence reaches the maximum permitted length
+    for _ in range(max_len):
+        # Gather all potential sequences at this step
+        all_candid = []
+        for seq, score in beam:
+            # Stop expanding the sequence if it ends with the end symbol
+            if seq[-1].item() == end_idx:
+                completed_sq.append((seq, score))
+                continue
+
+            # Compute next probabilities using the current sequence
+            tgt_mask = subsequent_mask(len(seq)).type_as(src_mask.data)
+            out = model.decode(memory, src_mask, seq.unsqueeze(0), tgt_mask)
+
+            # Extract log probabilities for the latest element in the sequence
+            log_probs = model.generator(out[:, -1])
+
+            # Identify the top k possible next steps
+            topk_log_probs, topk_indices = torch.topk(log_probs, beam_size)
+
+            # Construct new sequences by appending top candidates to current sequence
+            for i in range(beam_size):
+                candidate = torch.cat([seq, topk_indices[0, i].unsqueeze(0)], dim=0)
+                candidate_score = score + topk_log_probs[0, i].item()  # Update sequence score
+                all_candid.append((candidate, candidate_score))
+
+        # Select the top scoring sequences to continue beam search
+        ordered = sorted(all_candid, key=lambda x: x[1], reverse=True)
+        beam = ordered[:beam_size]
+
+        # Terminate if all sequences are complete
+        if len(completed_sq) == beam_size:
+            break
+
+    # Return the sequence with the highest score if any have completed
+    if completed_sq:
+        return sorted(completed_sq, key=lambda x: x[1], reverse=True)[0][0]
+
+    # Otherwise, return the highest scoring ongoing sequence
+    return beam[0][0]
 
 
 def collate_batch(
