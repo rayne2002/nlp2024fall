@@ -90,53 +90,84 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
 
 
 def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, end_idx):
-    # Your code here
+    # # Your code here
+    # memory = model.encode(src, src_mask)
+
+    # # Initiate beam search with a single sequence containing only the start symbol
+    # beam = [(torch.tensor([start_symbol], dtype=torch.long), 0)]  # Each element is a tuple (sequence, score)
+    # completed_sq = []
+
+    # # Execute the loop until the sequence reaches the maximum permitted length
+    # for _ in range(max_len):
+    #     # Gather all potential sequences at this step
+    #     all_candid = []
+    #     for seq, score in beam:
+    #         # Stop expanding the sequence if it ends with the end symbol
+    #         if seq[-1].item() == end_idx:
+    #             completed_sq.append((seq, score))
+    #             continue
+
+    #         # Compute next probabilities using the current sequence
+    #         tgt_mask = subsequent_mask(len(seq)).type_as(src_mask.data)
+    #         out = model.decode(memory, src_mask, seq.unsqueeze(0), tgt_mask)
+
+    #         # Extract log probabilities for the latest element in the sequence
+    #         log_probs = model.generator(out[:, -1])
+
+    #         # Identify the top k possible next steps
+    #         topk_log_probs, topk_indices = torch.topk(log_probs, beam_size)
+
+    #         # Construct new sequences by appending top candidates to current sequence
+    #         for i in range(beam_size):
+    #             candidate = torch.cat([seq, topk_indices[0, i].unsqueeze(0)], dim=0)
+    #             candidate_score = score + topk_log_probs[0, i].item()  # Update sequence score
+    #             all_candid.append((candidate, candidate_score))
+
+    #     # Select the top scoring sequences to continue beam search
+    #     ordered = sorted(all_candid, key=lambda x: x[1], reverse=True)
+    #     beam = ordered[:beam_size]
+
+    #     # Terminate if all sequences are complete
+    #     if len(completed_sq) == beam_size:
+    #         break
+
+    # # Return the sequence with the highest score if any have completed
+    # if completed_sq:
+    #     return sorted(completed_sq, key=lambda x: x[1], reverse=True)[0][0]
+
+    # # Otherwise, return the highest scoring ongoing sequence
+    # return beam[0][0]
     memory = model.encode(src, src_mask)
-
-    # Initiate beam search with a single sequence containing only the start symbol
-    beam = [(torch.tensor([start_symbol], dtype=torch.long), 0)]  # Each element is a tuple (sequence, score)
-    completed_sq = []
-
-    # Execute the loop until the sequence reaches the maximum permitted length
-    for _ in range(max_len):
-        # Gather all potential sequences at this step
-        all_candid = []
+    beam = [(torch.tensor([start_symbol]), 0.0)]  # List of tuples (sequence, score)
+    
+    # Iterating through sequence length
+    for _ in range(max_len - 1):
+        new_beam = []
         for seq, score in beam:
-            # Stop expanding the sequence if it ends with the end symbol
-            if seq[-1].item() == end_idx:
-                completed_sq.append((seq, score))
+            if seq[-1] == end_idx:
+                # If sequence has ended, keep it in the beam
+                new_beam.append((seq, score))
                 continue
-
-            # Compute next probabilities using the current sequence
-            tgt_mask = subsequent_mask(len(seq)).type_as(src_mask.data)
-            out = model.decode(memory, src_mask, seq.unsqueeze(0), tgt_mask)
-
-            # Extract log probabilities for the latest element in the sequence
-            log_probs = model.generator(out[:, -1])
-
-            # Identify the top k possible next steps
-            topk_log_probs, topk_indices = torch.topk(log_probs, beam_size)
-
-            # Construct new sequences by appending top candidates to current sequence
+            # Decode the next token
+            out = model.decode(memory, src_mask, seq.unsqueeze(0), subsequent_mask(seq.size(0)).type_as(src.data))
+            prob = model.generator(out[:, -1])  # Predict the next token
+            
+            # Get top beam_size tokens
+            top_probs, top_idx = torch.topk(prob, beam_size)
+            
+            # Add new sequences to the beam
             for i in range(beam_size):
-                candidate = torch.cat([seq, topk_indices[0, i].unsqueeze(0)], dim=0)
-                candidate_score = score + topk_log_probs[0, i].item()  # Update sequence score
-                all_candid.append((candidate, candidate_score))
+                next_seq = torch.cat([seq, torch.tensor([top_idx[i]])])
+                next_score = score + top_probs[i].item()
+                new_beam.append((next_seq, next_score))
+        
+        # Sort the beam by score and keep the best beam_size sequences
+        new_beam = sorted(new_beam, key=lambda x: x[1], reverse=True)[:beam_size]
+        beam = new_beam
+    
+    # Return the sequence with the highest score
+    return beam[0][0]  # Return the best sequence
 
-        # Select the top scoring sequences to continue beam search
-        ordered = sorted(all_candid, key=lambda x: x[1], reverse=True)
-        beam = ordered[:beam_size]
-
-        # Terminate if all sequences are complete
-        if len(completed_sq) == beam_size:
-            break
-
-    # Return the sequence with the highest score if any have completed
-    if completed_sq:
-        return sorted(completed_sq, key=lambda x: x[1], reverse=True)[0][0]
-
-    # Otherwise, return the highest scoring ongoing sequence
-    return beam[0][0]
 
 
 def collate_batch(
