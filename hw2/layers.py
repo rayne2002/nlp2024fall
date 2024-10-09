@@ -74,7 +74,6 @@ class DecoderLayer(nn.Module):
 def attention(query, key, value, mask=None, dropout=None):
     # Your code here
 
-   # Step 1: Calculate the dot product between queries and keys (transpose of keys)
     d_k = query.size(-1)  # Get the dimension of the keys
     scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)  # Scaled by sqrt(d_k)
     
@@ -101,38 +100,34 @@ class MultiHeadedAttention(nn.Module):
         # Your code here
         "Initialize the multi-headed attention mechanism."
         super(MultiHeadedAttention, self).__init__()
-        self.h = h  # Number of attention heads
-        self.d_model = d_model  # Dimension of the model (input/output)
-        self.d_k = d_model // h  # Dimension per head
-        self.d_v = d_model // h  # Dimension per head
-
         assert d_model % h == 0
-
-        # Linear layers for projecting the input query, key, and value matrices
+        self.d_k = d_model // h
+        self.h = h  # Number of attention heads
         self.linears = nn.ModuleList([nn.Linear(d_model, d_model) for _ in range(4)])
-        # Dropout layer
-        self.dropout = nn.Dropout(p=dropout)
-
         self.attn = None
+        self.d_model = d_model  # Dimension of the model (input/output)
+        self.dropout = nn.Dropout(p=dropout)
 
 
     def forward(self, query, key, value, mask=None):
         # Your code here
         "Implements the forward pass of multi-headed attention."
+        if mask is not None:
+            # Same mask for all heads
+            mask = mask.unsqueeze(1)
+
         batch_size = query.size(0)
+
         query, key, value = [
             lin(x).view(batch_size, -1, self.h, self.d_k).transpose(1, 2)
             for lin, x in zip(self.linears, (query, key, value))
         ]
 
      
-        batch_size = query.size(0)
-        if mask is not None:
-            mask = mask.unsqueeze(1)  # Same mask applied to all heads
-        attn_output, attn_output_weights = attention(query, key, value, mask=mask, dropout=self.dropout)
-
+        x, self.attn = attention(query, key, value, mask=mask, dropout=self.dropout)
         # Concatenate and process the output from all heads
-        attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
+        # attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
+        x = x.transpose(1, 2).contiguous().view(n_batches, -1, self.h * self.d_k)
         return self.linears[-1](attn_output)  # Final linear layer after attention
 
     
