@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import math
 from utils import clones
 from torch.nn.functional import log_softmax
@@ -33,6 +34,15 @@ class SublayerConnection(nn.Module):
 
     def forward(self, x, sublayer):
         "Apply residual connection to any sublayer with the same size."
+        # !!!
+        # sublayer_output = sublayer(self.norm(x))
+
+        # if x.size(1) != sublayer_output.size(1):
+        #     if x.size(1) < sublayer_output.size(1):
+        #         sublayer_output = sublayer_output[:, :x.size(1), :]  
+        #     else:
+        #         x = x[:, :sublayer_output.size(1), :]  
+        #!!!
         return x + self.dropout(sublayer(self.norm(x)))
     
     
@@ -51,7 +61,7 @@ class EncoderLayer(nn.Module):
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, mask))
         return self.sublayer[1](x, self.feed_forward)
     
-    
+   
 class DecoderLayer(nn.Module):
     "Decoder is made of self-attn, src-attn, and feed forward (defined below)"
 
@@ -71,51 +81,56 @@ class DecoderLayer(nn.Module):
     
     
 def attention(query, key, value, mask=None, dropout=None):
-    d_k = query.size(-1)
-    # Step 1: Compute scores
-    scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
-    # Step 2: Apply mask (if any)
-    if mask is not None:
-        scores = scores.masked_fill(mask == 0, float('-inf'))
-    # Step 3: Apply softmax
-    p_attn = torch.softmax(scores, dim=-1)
-    # Step 4: Apply dropout (if any)
-    if dropout is not None:
-        p_attn = dropout(p_attn)
-    # Step 5: Compute final values
-    return torch.matmul(p_attn, value), p_attn
+    # Your code here
 
+    d_k = query.size(-1) 
+    scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)  # Scaled by sqrt(d_k)
+    
+    if mask is not None:
+        mask = mask.unsqueeze(1)  # Add a new dimension at index 1 for the heads
+        scores = scores.masked_fill(mask == 0, -1e9)
+    
+    # attn = F.softmax(scores, dim=-1)
+    attn = torch.softmax(scores, dim=-1) #!!!
+    if dropout is not None:
+        attn = dropout(attn)
+    
+    output = torch.matmul(attn, value)
+    
+    return output, attn
 
 class MultiHeadedAttention(nn.Module):
     def __init__(self, h, d_model, dropout=0.1):
-        "Initialize Multi-Headed Attention"
+        # Your code here
+        "Initialize the multi-headed attention mechanism."
         super(MultiHeadedAttention, self).__init__()
-        assert d_model % h == 0, "d_model must be divisible by number of heads (h)"
-        # d_k is the dimension of each head
+        assert d_model % h == 0
         self.d_k = d_model // h
-        self.h = h
-        # Create linear layers for query, key, value, and output
-        self.linears = clones(nn.Linear(d_model, d_model), 4)
-        self.attn = None  # To store attention weights
+        self.h = h  # Number of attention heads
+        # self.linears = nn.ModuleList([nn.Linear(d_model, d_model) for _ in range(4)])
+        self.linears = clones(nn.Linear(d_model, d_model), 4)  # !!!Linear layers for query, key, value, and output
+        self.attn = None
         self.dropout = nn.Dropout(p=dropout)
 
+
     def forward(self, query, key, value, mask=None):
-        "Compute Multi-Headed Attention"
+        # Your code here
+        "Implements the forward pass of multi-headed attention."
         if mask is not None:
-            # Same mask applied to all heads
             mask = mask.unsqueeze(1)
-        nbatches = query.size(0)
+
+        batch_size = query.size(0)
 
         query, key, value = [
-            lin(x).view(nbatches, -1, self.h, self.d_k).transpose(1, 2)
+            lin(x).view(batch_size, -1, self.h, self.d_k).transpose(1, 2)
             for lin, x in zip(self.linears, (query, key, value))
         ]
 
+     
         x, self.attn = attention(query, key, value, mask=mask, dropout=self.dropout)
+        x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
+        return self.linears[-1](x)  # Final linear layer after attention
 
-        x = x.transpose(1, 2).contiguous().view(nbatches, -1, self.h * self.d_k)
-        return self.linears[-1](x)
-    
     
 class PositionwiseFeedForward(nn.Module):
     "Implements FFN equation."
@@ -176,4 +191,4 @@ class LabelSmoothing(nn.Module):
         self.true_dist = true_dist
         return self.criterion(x, true_dist.clone().detach())    
 
-
+    
