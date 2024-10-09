@@ -137,6 +137,7 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
 
     # # Otherwise, return the highest scoring ongoing sequence
     # return beam[0][0]
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     src = src.to(device)           # Move src tensor to device (GPU/CPU)
     src_mask = src_mask.to(device)
     memory = model.encode(src, src_mask)
