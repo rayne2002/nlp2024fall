@@ -72,7 +72,6 @@ def test_beam_search():
     from main import eval_model, load_tokenizers, load_vocab, create_dataloaders, create_model
     
     torch.cuda.set_per_process_memory_fraction(0.8)
-    torch.cuda.set_max_split_size_mb(512)
 
     # Load your data
     spacy_de, spacy_en = load_tokenizers()
@@ -85,7 +84,7 @@ def test_beam_search():
         vocab_tgt,
         spacy_de,
         spacy_en,
-        batch_size=4,
+        batch_size=2,
     )
     
     #valid_dataloader = valid_dataloader[:5]
