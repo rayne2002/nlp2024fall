@@ -105,6 +105,7 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
         all_candidates = []
 
         for i in range(beam_size):
+            print(f"ys size: {ys.size()} at iteration {_}")
             if ys.size(1) > 1 and ys[i, -1].view(-1)[0].item() == end_idx and _ > 5:
                 completed_sequences.append((ys[i], scores[i]))
                 continue
@@ -118,12 +119,11 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
                 ys_i = ys[i].unsqueeze(0) if ys[i].dim() == 1 else ys[i].view(1,-1)
                 topk_token = topk_indices[k].view(1, -1) 
                 new_seq = torch.cat([ys_i, topk_token], dim=1)
+                print(f"topk_log_probs[k] shape: {topk_log_probs[k].shape}")
+                print(f"Concatenated shape new seq: {new_seq.shape}")
                 new_score = scores[i] + topk_log_probs[k].view(-1)[0].item()
                 all_candidates.append((new_seq, new_score))
-                # candidate = torch.cat([i, topk_indices[0, i].unsqueeze(0)], dim=0)
-                # candidate_score = ys[i] + topk_log_probs[0, i].item()  # Add log probability
-                # all_candidates.append((candidate, candidate_score))
-
+       
         if len(all_candidates) == 0:
             raise RuntimeError("No candidates generated at this step.")
 
