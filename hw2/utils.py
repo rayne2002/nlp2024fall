@@ -134,8 +134,8 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
             # Append each top token to the current sequence and update the score
             for k in range(len(topk_indices)):  # Iterate through valid candidates
                 new_seq = torch.cat([ys[i], topk_indices[k].unsqueeze(0)], dim=0)
-                new_score = scores[i] + topk_log_probs[0, k].item()
-                print(f"Candidate {k}: Token: {topk_indices[0, k]}, Log prob: {topk_log_probs[0, k].item()}, Score: {new_score}")
+                new_score = scores[i] + topk_log_probs[k].item()  # Fix the indexing here
+                print(f"Candidate {k}: Token: {topk_indices[k]}, Log prob: {topk_log_probs[k].item()}, Score: {new_score}")
                 all_candidates.append((new_seq, new_score))
 
         # If no candidates are generated, raise an error
