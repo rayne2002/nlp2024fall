@@ -105,7 +105,7 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
         all_candidates = []
 
         for i in range(beam_size):
-            if ys[i, -1].squeeze().item() == end_idx and _ > 5:
+            if ys[i, -1].view(-1)[0].item() == end_idx and _ > 5:
                 completed_sequences.append((ys[i], scores[i]))
                 continue
 
@@ -115,10 +115,10 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
             topk_log_probs, topk_indices = torch.topk(log_probs, beam_size)
 
             for k in range(len(topk_indices)):
-                ys_i = ys[i].unsqueeze(0) if ys[i].dim() == 1 else ys[i]
-                topk_token = topk_indices[k].view(1, 1) 
+                ys_i = ys[i].unsqueeze(0) if ys[i].dim() == 1 else ys[i].view(1,-1)
+                topk_token = topk_indices[k].view(1, -11) 
                 new_seq = torch.cat([ys_i, topk_token], dim=1)
-                new_score = scores[i] + topk_log_probs[k].item()
+                new_score = scores[i] + topk_log_probs[k][0].item()
                 all_candidates.append((new_seq, new_score))
 
         if len(all_candidates) == 0:
