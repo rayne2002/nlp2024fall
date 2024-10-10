@@ -97,8 +97,8 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
     memory = memory.expand(beam_size, *memory.shape[1:])
     src_mask = src_mask.expand(beam_size, *src_mask.shape[1:])
 
-    ys = torch.zeros(beam_size, 1).fill_(start_symbol).type_as(src.data).cuda()
-    scores = torch.zeros(beam_size).cuda()
+    ys = torch.zeros(1, 1).fill_(start_symbol).type_as(src.data).cuda()
+    scores = torch.Tensor([0.]).cuda()
     completed_sequences = []
 
     for _ in range(max_len):
