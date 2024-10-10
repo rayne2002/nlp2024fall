@@ -113,7 +113,9 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
             # Generate the next probabilities from the model
             tgt_mask = subsequent_mask(ys.size(1)).type_as(src_mask.data)
             out = model.decode(memory[i:i+1], src_mask[i:i+1], ys[i:i+1], tgt_mask)
+            print(f"Decoder output: {out}")
             log_probs = model.generator(out[:, -1])
+            print(f"log_probs: {log_probs}")
 
             # Take the top k candidates (beam size)
             topk_log_probs, topk_indices = torch.topk(log_probs, beam_size)
