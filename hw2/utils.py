@@ -106,7 +106,7 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
         # Generate beam candidates for each sequence in the current beam
         for i in range(beam_size):
             # If sequence ends with the end token and is long enough, mark it as completed
-            if ys[i, -1].squeeze().item() == end_idx and _ > 5:
+            if ys[i, -1].view().item() == end_idx and _ > 5:
                 completed_sequences.append((ys[i], scores[i]))
                 continue
 
