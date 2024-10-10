@@ -82,7 +82,7 @@ def test_beam_search():
         vocab_tgt,
         spacy_de,
         spacy_en,
-        batch_size=2,
+        batch_size=1,
     )
     
     #valid_dataloader = valid_dataloader[:5]
@@ -109,7 +109,7 @@ def test_beam_search():
             match = False
             break
     
-    assert match, print("Beam search output with beam_size 2 should match greedy decoding")
+    assert match, print("Beam search output with beam_size 1 should match greedy decoding")
     print("=" * 10 + "   Beam Search Unit Test 1 Passed   " + "="*10)   
     
     
