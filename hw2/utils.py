@@ -188,7 +188,7 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
             break
 
     # Step 8: Return the best sequence
-    return ys[0]  # The sequence with the best score
+    return ys[0] 
 
 
 
