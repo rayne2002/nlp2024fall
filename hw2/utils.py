@@ -91,8 +91,6 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
 
 def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, end_idx):
     # # Your code here
-    def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, end_idx):
-    # Encode the input and expand memory for the beam size
     memory = model.encode(src, src_mask)
     memory = memory.expand(beam_size, *memory.shape[1:])
     src_mask = src_mask.expand(beam_size, *src_mask.shape[1:])
