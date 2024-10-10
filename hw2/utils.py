@@ -118,7 +118,7 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
                 ys_i = ys[i].unsqueeze(0) if ys[i].dim() == 1 else ys[i].view(1,-1)
                 topk_token = topk_indices[k].view(1, -1) 
                 new_seq = torch.cat([ys_i, topk_token], dim=1)
-                new_score = scores[i] + topk_log_probs[k][0].item()
+                new_score = scores[i] + topk_log_probs[k].view(-1)[0].item()
                 all_candidates.append((new_seq, new_score))
 
         if len(all_candidates) == 0:
