@@ -91,16 +91,16 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
 
 def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, end_idx):
     # # Your code here
+    def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, end_idx):
+    # Encode the input and expand memory for the beam size
     memory = model.encode(src, src_mask)
     memory = memory.expand(beam_size, *memory.shape[1:])
     src_mask = src_mask.expand(beam_size, *src_mask.shape[1:])
 
-    # Initialize the beam with the start symbol and scores with zeros
+    # Initialize the beam with the start symbol and scores set to zeros
     ys = torch.zeros(beam_size, 1).fill_(start_symbol).type_as(src.data).cuda()
     scores = torch.zeros(beam_size).cuda()
     completed_sequences = []
-
-    MIN_LOG_PROB = -15  # Set a minimum threshold for log probabilities
 
     for _ in range(max_len):
         all_candidates = []
@@ -123,30 +123,17 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
             # Take the top k candidates (beam size)
             topk_log_probs, topk_indices = torch.topk(log_probs, beam_size)
 
-            # Filter out very low-probability tokens
-            valid_topk = topk_log_probs > MIN_LOG_PROB
-            if valid_topk.any():
-                topk_log_probs = topk_log_probs[valid_topk]
-                topk_indices = topk_indices[valid_topk]
-            else:
-                raise RuntimeError("No valid tokens with sufficient log probability.")
-
             # Append each top token to the current sequence and update the score
             for k in range(len(topk_indices)):  # Iterate through valid candidates
-                if topk_log_probs[k].item() < MIN_LOG_PROB:
-                    print(f"Skipping candidate {k} with log prob {topk_log_probs[k].item()} (below threshold)")
-                    continue  # Skip candidates with low log probabilities
-
                 # Ensure ys[i] is treated as a 2D tensor if it's 1D
                 ys_i = ys[i].unsqueeze(0) if ys[i].dim() == 1 else ys[i]
 
                 # Reshape topk_indices[k] properly for concatenation
-                new_seq = torch.cat([ys_i, topk_indices[k].view(1,1)], dim=1)  # Concatenate along the sequence dimension
+                new_seq = torch.cat([ys_i, topk_indices[k].view(1, 1)], dim=1)  # Concatenate along the sequence dimension
 
                 new_score = scores[i] + topk_log_probs[k].item()
                 print(f"Candidate {k}: Token: {topk_indices[k]}, Log prob: {topk_log_probs[k].item()}, Score: {new_score}")
                 all_candidates.append((new_seq, new_score))
-
 
         # If no candidates are generated, raise an error
         if len(all_candidates) == 0:
@@ -170,6 +157,7 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
 
     # Otherwise, return the highest scoring sequence from the beam
     return beam[0][0]
+
 
 def collate_batch(
     batch,
