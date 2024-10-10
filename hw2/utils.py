@@ -105,7 +105,7 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
         all_candidates = []
 
         for i in range(beam_size):
-            if ys[i, -1].view(-1)[0].item() == end_idx and _ > 5:
+            if ys[i, -1].view(-1).item() == end_idx and _ > 5:
                 completed_sequences.append((ys[i], scores[i]))
                 continue
 
