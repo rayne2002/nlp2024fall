@@ -95,40 +95,56 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
     memory = memory.expand(beam_size, *memory.shape[1:])
     src_mask = src_mask.expand(beam_size, *src_mask.shape[1:])
 
+    # Initialize the beam with the start symbol and scores with zeros
     ys = torch.zeros(beam_size, 1).fill_(start_symbol).type_as(src.data).cuda()
     scores = torch.zeros(beam_size).cuda()
     completed_sequences = []
 
     for _ in range(max_len):
         all_candidates = []
+
+        # Generate beam candidates for each sequence in the current beam
         for i in range(beam_size):
+            # If sequence ends with the end token, mark it as completed
             if ys[i, -1].item() == end_idx:
                 completed_sequences.append((ys[i], scores[i]))
                 continue
 
+            # Generate the next probabilities from the model
             tgt_mask = subsequent_mask(ys.size(1)).type_as(src_mask.data)
             out = model.decode(memory[i:i+1], src_mask[i:i+1], ys[i:i+1], tgt_mask)
             log_probs = model.generator(out[:, -1])
 
+            # Take the top k candidates (beam size)
             topk_log_probs, topk_indices = torch.topk(log_probs, beam_size)
 
+            # Append each top token to the current sequence and update the score
             for k in range(beam_size):
                 new_seq = torch.cat([ys[i], topk_indices[0, k].unsqueeze(0)], dim=0)
                 new_score = scores[i] + topk_log_probs[0, k].item()
                 all_candidates.append((new_seq, new_score))
 
+        # If no candidates are generated, raise an error
+        if len(all_candidates) == 0:
+            raise RuntimeError("No candidates generated at this step.")
+
+        # Sort candidates by score and keep the top beam_size candidates
         ordered = sorted(all_candidates, key=lambda x: x[1], reverse=True)
         beam = ordered[:beam_size]
 
+        # Update ys and scores with the new beam sequences and scores
         ys = torch.stack([seq for seq, _ in beam])
         scores = torch.tensor([score for _, score in beam]).cuda()
 
+        # Stop early if all sequences in the beam are completed
         if len(completed_sequences) == beam_size:
             break
 
+    # Return the best sequence from completed sequences, if available
     if completed_sequences:
         return sorted(completed_sequences, key=lambda x: x[1], reverse=True)[0][0]
 
+    # Otherwise, return the highest scoring sequence from the beam
     return beam[0][0]
 
 def collate_batch(
