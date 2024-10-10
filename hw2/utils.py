@@ -105,8 +105,7 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
 
         # Generate beam candidates for each sequence in the current beam
         for i in range(beam_size):
-            # If sequence ends with the end token and is long enough, mark it as completed
-            if ys[i, -1].view(-1).item() == end_idx and _ > 5:
+            if ys[i, -1].item() == end_idx and _ > 5:
                 completed_sequences.append((ys[i], scores[i]))
                 continue
 
@@ -115,29 +114,26 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
             out = model.decode(memory[i:i+1], src_mask[i:i+1], ys[i:i+1], tgt_mask)
             log_probs = model.generator(out[:, -1])
 
-            # Debugging: Check the log probabilities generated
-            print(f"log_probs at step {_}, beam {i}: {log_probs}")
-
             # Take the top k candidates (beam size)
             topk_log_probs, topk_indices = torch.topk(log_probs, beam_size)
 
             # Append each top token to the current sequence and update the score
-            for k in range(len(topk_indices)):  # Iterate through valid candidates
-                # Ensure ys[i] is treated as a 2D tensor if it's 1D
+            for k in range(len(topk_indices)):
+                # Ensure ys[i] is treated as a 2D tensor
                 ys_i = ys[i].unsqueeze(0) if ys[i].dim() == 1 else ys[i]
 
                 # Reshape topk_indices[k] properly for concatenation
-                new_seq = torch.cat([ys_i, topk_indices[k].view(1, 1)], dim=1)  # Concatenate along the sequence dimension
+                next_token = topk_indices[k].unsqueeze(0).unsqueeze(0)  # Shape it as (1, 1)
+
+                # Concatenate the token to the sequence
+                new_seq = torch.cat([ys_i, next_token], dim=1)  # Concatenating along sequence length
 
                 new_score = scores[i] + topk_log_probs[k].item()
-                print(f"Candidate {k}: Token: {topk_indices[k]}, Log prob: {topk_log_probs[k].item()}, Score: {new_score}")
                 all_candidates.append((new_seq, new_score))
 
-        # If no candidates are generated, raise an error
         if len(all_candidates) == 0:
             raise RuntimeError("No candidates generated at this step.")
 
-        # Sort candidates by score and keep the top beam_size candidates
         ordered = sorted(all_candidates, key=lambda x: x[1], reverse=True)
         beam = ordered[:beam_size]
 
@@ -145,16 +141,14 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
         ys = torch.stack([seq for seq, _ in beam])
         scores = torch.tensor([score for _, score in beam]).cuda()
 
-        # Stop early if all sequences in the beam are completed
         if len(completed_sequences) == beam_size:
             break
 
-    # Return the best sequence from completed sequences, if available
     if completed_sequences:
         return sorted(completed_sequences, key=lambda x: x[1], reverse=True)[0][0]
 
-    # Otherwise, return the highest scoring sequence from the beam
     return beam[0][0]
+
 
 
 def collate_batch(
