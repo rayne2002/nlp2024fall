@@ -89,6 +89,7 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
     return ys
 
 
+
 def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, end_idx):
     # # Your code here
     memory = model.encode(src, src_mask)
