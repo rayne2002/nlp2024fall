@@ -141,7 +141,7 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
                 ys_i = ys[i].unsqueeze(0) if ys[i].dim() == 1 else ys[i]
 
                 # Reshape topk_indices[k] properly for concatenation
-                new_seq = torch.cat([ys_i, topk_indices[k].view(1)], dim=1)  # Concatenate along the sequence dimension
+                new_seq = torch.cat([ys_i, topk_indices[k].view(1,1)], dim=1)  # Concatenate along the sequence dimension
 
                 new_score = scores[i] + topk_log_probs[k].item()
                 print(f"Candidate {k}: Token: {topk_indices[k]}, Log prob: {topk_log_probs[k].item()}, Score: {new_score}")
