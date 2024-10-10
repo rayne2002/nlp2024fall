@@ -71,9 +71,7 @@ def test_beam_search():
     
     from main import eval_model, load_tokenizers, load_vocab, create_dataloaders, create_model
     
-    torch.cuda.set_per_process_memory_fraction(0.8)
-
-    # Load your data
+    #global vocab_src, vocab_tgt, spacy_de, spacy_en
     spacy_de, spacy_en = load_tokenizers()
     vocab_src, vocab_tgt = load_vocab(spacy_de, spacy_en)
     
@@ -84,26 +82,27 @@ def test_beam_search():
         vocab_tgt,
         spacy_de,
         spacy_en,
-        batch_size=2,
+        batch_size=1,
     )
     
     #valid_dataloader = valid_dataloader[:5]
 
     model = create_model(len(vocab_src), len(vocab_tgt), N=6)
     model.load_state_dict(
-        torch.load("multi30k_model_final.pt", map_location=torch.device('cuda'))
+        torch.load("multi30k_model_final.pt", map_location=torch.device("cpu"))
     )
-    model.cuda()
+    model.cuda(0)
     model.eval()
 
-    # Evaluate using beam search or greedy search
     results_greedy, score = eval_model(
-        valid_dataloader, model, vocab_src, vocab_tgt, beam_search=False, beam_size=2, verbose=False, max_iter=5
+        valid_dataloader, model, vocab_src, vocab_tgt, beam_search=False, beam_size=1, verbose=False, max_iter=5
     )
-
+        
+    
     results_beam, score = eval_model(
-        valid_dataloader, model, vocab_src, vocab_tgt, beam_search=True, beam_size=2, verbose=False, max_iter=5
+        valid_dataloader, model, vocab_src, vocab_tgt, beam_search=True, beam_size=1, verbose=False, max_iter=5
     )
+    
     match = True
     for k in range(5):
         if results_greedy[k][-1] != results_beam[k][-1]:
