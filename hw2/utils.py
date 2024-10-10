@@ -90,7 +90,7 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
 
 
 
-def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, end_idx):
+# def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, end_idx):
     # # Your code here
     
     memory = model.encode(src, src_mask)
@@ -105,7 +105,7 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
         all_candidates = []
 
         for i in range(beam_size):
-            if ys[i, -1].view(-1)[0].item() == end_idx and _ > 5:
+            if ys[i, -1].view(-1).item() == end_idx and _ > 5:
                 completed_sequences.append((ys[i], scores[i]))
                 continue
 
@@ -143,6 +143,52 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
         return sorted(completed_sequences, key=lambda x: x[1], reverse=True)[0][0]
 
     return beam[0][0]
+def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, end_idx):
+    # Step 1: Encode the source sequence
+    memory = model.encode(src, src_mask)
+    
+    # Step 2: Initialize the beam with the start symbol
+    ys = torch.zeros(1, 1).fill_(start_symbol).type_as(src.data).cuda()  # Shape (1, 1)
+    scores = torch.Tensor([0.0]).cuda()  # Initial score is 0 for the first sequence
+    
+    # Expand memory and src_mask to beam size for parallel processing
+    memory = memory.expand(beam_size, -1, -1)
+    src_mask = src_mask.expand(beam_size, 1, 1, -1)
+    
+    # Completed sequences that hit the end token
+    completed_sequences = []
+
+    for step in range(max_len):
+        # Step 3: Decode the next token for each sequence in the beam
+        tgt_mask = (subsequent_mask(ys.size(1)).type_as(src_mask.data))  # Adjust mask for current sequence length
+        out = model.decode(memory, src_mask, ys, tgt_mask)
+        
+        # Step 4: Get log probabilities from the last token in the sequence
+        log_probs = model.generator(out[:, -1, :])
+        
+        # Step 5: Use torch.topk to get the top beam_size candidates
+        topk_log_probs, topk_indices = torch.topk(log_probs, beam_size, dim=1)
+
+        # Step 6: Generate new candidate sequences by appending the top tokens
+        all_candidates = []
+        for i in range(beam_size):
+            for j in range(beam_size):
+                new_seq = torch.cat([ys[i], topk_indices[i, j].view(1)], dim=0)
+                new_score = scores[i] + topk_log_probs[i, j].item()  # Update score with log probability
+                all_candidates.append((new_seq, new_score))
+
+        # Step 7: Sort and keep only the top beam_size sequences
+        ordered = sorted(all_candidates, key=lambda x: x[1], reverse=True)
+        ys, scores = zip(*ordered[:beam_size])
+        ys = torch.stack(ys)
+        scores = torch.tensor(scores).cuda()
+        
+        # Check if all sequences have reached the end token
+        if all(seq[-1].item() == end_idx for seq in ys):
+            break
+
+    # Step 8: Return the best sequence
+    return ys[0] 
 
 
 
