@@ -129,7 +129,7 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
                     print(f"Skipping candidate {k} with log prob {topk_log_probs[k].item()} (below threshold)")
                     continue  # Skip candidates with low log probabilities
 
-                new_seq = torch.cat([ys[i], topk_indices[k].unsqueeze(0)], dim=0)
+                new_seq = torch.cat([ys[i], topk_indices[k].view(1, 1)], dim=1)  # Fix the dimension mismatch here
                 new_score = scores[i] + topk_log_probs[k].item()
                 print(f"Candidate {k}: Token: {topk_indices[k]}, Log prob: {topk_log_probs[k].item()}, Score: {new_score}")
                 all_candidates.append((new_seq, new_score))
