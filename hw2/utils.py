@@ -92,57 +92,51 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
 
 def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, end_idx):
     # # Your code here
-    
+    ys = torch.zeros(1, 1).fill_(start_symbol).type_as(src.data)
+    scores = torch.zeros(1).type_as(src.data)
     memory = model.encode(src, src_mask)
-    memory = memory.expand(beam_size, *memory.shape[1:])
-    src_mask = src_mask.expand(beam_size, *src_mask.shape[1:])
 
-    ys = torch.zeros(1, 1).fill_(start_symbol).type_as(src.data).cuda()
-    scores = torch.Tensor([0.]).cuda()
-    completed_sequences = []
+    # Expand memory and source mask for beam search
+    memory = memory.repeat(beam_size, 1, 1)
+    src_mask = src_mask.repeat(beam_size, 1, 1)
 
-    for _ in range(max_len):
-        all_candidates = []
+    for i in range(max_len - 1):
+        # Decode and generate probabilities
+        out = model.decode(
+            memory, src_mask, ys, subsequent_mask(ys.size(1)).type_as(src.data)
+        )
+        prob = model.generator(out[:, -1])
 
-        for i in range(beam_size):
-            if ys[i, -1].view(-1).item() == end_idx and _ > 5:
-                completed_sequences.append((ys[i], scores[i]))
-                continue
+        # Get top-k probabilities and indices
+        prob, idx = torch.topk(prob, beam_size, dim=1)
 
-            tgt_mask = subsequent_mask(ys.size(1)).type_as(src_mask.data)
-            out = model.decode(memory[i:i+1], src_mask[i:i+1], ys[i:i+1], tgt_mask)
-            log_probs = model.generator(out[:, -1])
-            topk_log_probs, topk_indices = torch.topk(log_probs, beam_size)
+        # Update scores and sequences
+        scores = scores + prob.log().diagonal()
+        ys = torch.cat([ys.repeat(beam_size, 1), idx], dim=1)
 
-            for k in range(len(topk_indices)):
-                ys_i = ys[i].unsqueeze(0) if ys[i].dim() == 1 else ys[i].view(1,-1)
-                topk_token = topk_indices[k].view(1, -1) 
-                new_seq = torch.cat([ys_i, topk_token], dim=1)
-                new_score = scores[i] + topk_log_probs[k].view(-1)[0].item()
-                all_candidates.append((new_seq, new_score))
-                # candidate = torch.cat([i, topk_indices[0, i].unsqueeze(0)], dim=0)
-                # candidate_score = ys[i] + topk_log_probs[0, i].item()  # Add log probability
-                # all_candidates.append((candidate, candidate_score))
+        # Remove completed sequences
+        completed = (ys[:, -1] == end_idx).nonzero(as_tuple=True)[0]
+        if len(completed) > 0:
+            # Update scores and sequences for completed hypotheses
+            scores[completed] /= (i + 1)
+            hypotheses = ys[completed]
+            return hypotheses, scores[completed]
 
-        if len(all_candidates) == 0:
-            raise RuntimeError("No candidates generated at this step.")
-
-        ordered = sorted(all_candidates, key=lambda x: x[1], reverse=True)
-        beam = ordered[:beam_size]
-
-        ys = torch.stack([seq for seq, _ in beam])
-        scores = torch.tensor([score for _, score in beam]).cuda()
-
+    # Return top-scoring hypotheses
+    scores /= max_len
+    top_scores, top_indices = torch.topk(scores, beam_size)
+    hypotheses = ys[top_indices]
+    return hypotheses, top_scores
         # Clear unused GPU memory
-        torch.cuda.empty_cache()
+    #     torch.cuda.empty_cache()
 
-        if len(completed_sequences) == beam_size:
-            break
+    #     if len(completed_sequences) == beam_size:
+    #         break
 
-    if completed_sequences:
-        return sorted(completed_sequences, key=lambda x: x[1], reverse=True)[0][0]
+    # if completed_sequences:
+    #     return sorted(completed_sequences, key=lambda x: x[1], reverse=True)[0][0]
 
-    return beam[0][0]
+    # return beam[0][0]
 
 
 
