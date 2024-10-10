@@ -92,7 +92,7 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
 
 def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, end_idx):
     # # Your code here
-    ##
+    
     memory = model.encode(src, src_mask)
     memory = memory.expand(beam_size, *memory.shape[1:])
     src_mask = src_mask.expand(beam_size, *src_mask.shape[1:])
@@ -105,7 +105,7 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
         all_candidates = []
 
         for i in range(beam_size):
-            if ys[i, -1].item() == end_idx and _ > 5:
+            if ys[i, -1].squeeze().item() == end_idx and _ > 5:
                 completed_sequences.append((ys[i], scores[i]))
                 continue
 
