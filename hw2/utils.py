@@ -95,7 +95,6 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
     memory = memory.expand(beam_size, *memory.shape[1:])
     src_mask = src_mask.expand(beam_size, *src_mask.shape[1:])
 
-    # Initialize the beam with the start symbol and scores set to zeros
     ys = torch.zeros(beam_size, 1).fill_(start_symbol).type_as(src.data).cuda()
     scores = torch.zeros(beam_size).cuda()
     completed_sequences = []
@@ -103,31 +102,20 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
     for _ in range(max_len):
         all_candidates = []
 
-        # Generate beam candidates for each sequence in the current beam
         for i in range(beam_size):
             if ys[i, -1].item() == end_idx and _ > 5:
                 completed_sequences.append((ys[i], scores[i]))
                 continue
 
-            # Generate the next probabilities from the model
             tgt_mask = subsequent_mask(ys.size(1)).type_as(src_mask.data)
             out = model.decode(memory[i:i+1], src_mask[i:i+1], ys[i:i+1], tgt_mask)
             log_probs = model.generator(out[:, -1])
-
-            # Take the top k candidates (beam size)
             topk_log_probs, topk_indices = torch.topk(log_probs, beam_size)
 
-            # Append each top token to the current sequence and update the score
             for k in range(len(topk_indices)):
-                # Ensure ys[i] is treated as a 2D tensor
                 ys_i = ys[i].unsqueeze(0) if ys[i].dim() == 1 else ys[i]
-
-                # Reshape topk_indices[k] properly for concatenation
-                next_token = topk_indices[k].unsqueeze(0).unsqueeze(0)  # Shape it as (1, 1)
-
-                # Concatenate the token to the sequence
-                new_seq = torch.cat([ys_i, next_token], dim=1)  # Concatenating along sequence length
-
+                topk_token = topk_indices[k].view(1, 1) 
+                new_seq = torch.cat([ys_i, topk_token], dim=1)
                 new_score = scores[i] + topk_log_probs[k].item()
                 all_candidates.append((new_seq, new_score))
 
@@ -137,9 +125,11 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
         ordered = sorted(all_candidates, key=lambda x: x[1], reverse=True)
         beam = ordered[:beam_size]
 
-        # Update ys and scores with the new beam sequences and scores
         ys = torch.stack([seq for seq, _ in beam])
         scores = torch.tensor([score for _, score in beam]).cuda()
+
+        # Clear unused GPU memory
+        torch.cuda.empty_cache()
 
         if len(completed_sequences) == beam_size:
             break
@@ -148,6 +138,7 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
         return sorted(completed_sequences, key=lambda x: x[1], reverse=True)[0][0]
 
     return beam[0][0]
+
 
 
 
