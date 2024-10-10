@@ -100,30 +100,42 @@ def beam_search_decode(model, src, src_mask, max_len, start_symbol, beam_size, e
     scores = torch.zeros(beam_size).cuda()
     completed_sequences = []
 
+    MIN_LOG_PROB = -15  # Set a minimum threshold for log probabilities
+
     for _ in range(max_len):
         all_candidates = []
 
         # Generate beam candidates for each sequence in the current beam
         for i in range(beam_size):
-            # If sequence ends with the end token, mark it as completed
-            if ys[i, -1].item() == end_idx:
+            # If sequence ends with the end token and is long enough, mark it as completed
+            if ys[i, -1].item() == end_idx and _ > 5:
                 completed_sequences.append((ys[i], scores[i]))
                 continue
 
             # Generate the next probabilities from the model
             tgt_mask = subsequent_mask(ys.size(1)).type_as(src_mask.data)
             out = model.decode(memory[i:i+1], src_mask[i:i+1], ys[i:i+1], tgt_mask)
-            print(f"Decoder output: {out}")
             log_probs = model.generator(out[:, -1])
-            print(f"log_probs: {log_probs}")
+
+            # Debugging: Check the log probabilities generated
+            print(f"log_probs at step {_}, beam {i}: {log_probs}")
 
             # Take the top k candidates (beam size)
             topk_log_probs, topk_indices = torch.topk(log_probs, beam_size)
 
+            # Filter out very low-probability tokens
+            valid_topk = topk_log_probs > MIN_LOG_PROB
+            if valid_topk.any():
+                topk_log_probs = topk_log_probs[valid_topk]
+                topk_indices = topk_indices[valid_topk]
+            else:
+                raise RuntimeError("No valid tokens with sufficient log probability.")
+
             # Append each top token to the current sequence and update the score
-            for k in range(beam_size):
+            for k in range(len(topk_indices)):  # Iterate through valid candidates
                 new_seq = torch.cat([ys[i], topk_indices[0, k].unsqueeze(0)], dim=0)
                 new_score = scores[i] + topk_log_probs[0, k].item()
+                print(f"Candidate {k}: Token: {topk_indices[0, k]}, Log prob: {topk_log_probs[0, k].item()}, Score: {new_score}")
                 all_candidates.append((new_seq, new_score))
 
         # If no candidates are generated, raise an error
