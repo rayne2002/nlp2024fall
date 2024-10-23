@@ -33,6 +33,62 @@ def example_transform(example):
 # something called synsets (which stands for synonymous words) and for each of them, lemmas() should give you a possible synonym word.
 # You can randomly select each word with some fixed probability to replace by a synonym.
 
+def get_synonyms(word):
+    synonyms = set()
+    for syn in wordnet.synsets(word):
+        for lemma in syn.lemmas():
+            synonym = lemma.name().replace('_', ' ')
+            synonyms.add(synonym)
+    return list(synonyms)
+
+import random
+
+keyboard_map = {
+    'a': ['s'],
+    'b': ['v', 'n'],
+    'c': ['x'],
+    'd': ['f'],
+    'e': ['r'],
+    'f': ['g', 'd'],
+    'g': ['f', 'h'],
+    'h': ['g', 'j'],
+    'i': ['o', 'u'],
+    'j': ['h', 'k'],
+    'k': ['j', 'l'],
+    'l': ['k'],
+    'm': ['n'],
+    'n': ['b', 'm'],
+    'o': ['i', 'p'],
+    'p': ['o'],
+    'q': ['w'],
+    'r': ['e', 't'],
+    's': ['a', 'w'],
+    't': ['r', 'y', 'g', 'h'],
+    'u': ['i', 'o'],
+    'v': ['b'],
+    'w': ['q', 's'],
+    'x': ['c'],
+    'y': ['t', 'u'],
+    'z': []
+}
+
+def introduce_typos(word):
+    typo_word = list(word.lower())
+    words_with_typos = []
+
+  
+    for _ in range(len(typo_word)):
+        index_to_change = random.randint(0, len(typo_word) - 1)
+        original_char = typo_word[index_to_change]
+
+        if original_char in keyboard_map and keyboard_map[original_char]:
+            typo_word[index_to_change] = random.choice(keyboard_map[original_char])
+        else:
+            typo_word[index_to_change] = random.choice('abcdefghijklmnopqrstuvwxyz')
+
+        words_with_typos.append(''.join(typo_word))
+
+    return random.choice(words_with_typos)
 
 def custom_transform(example):
     ################################
@@ -44,8 +100,29 @@ def custom_transform(example):
 
     # You should update example["text"] using your transformation
 
-    raise NotImplementedError
+    tokens = word_tokenize(example["text"])
+    new_tokens = []
+    synonym_replaced = False
+
+    for token in tokens:
+        if len(token) >= 4 and token.lower() not in [".", ",", "!", "?", ";", ":", " "] and not synonym_replaced:
+            synonyms = get_synonyms(token)
+            if synonyms:
+                new_token = random.choice(synonyms)
+                synonym_replaced = True
+            else:
+                new_token = token
+        else:
+            new_token = token
+
+        if random.random() < 0.1:
+            new_token = introduce_typos(new_token)
+
+        new_tokens.append(new_token)
+
+    example["text"] = ' '.join(new_tokens)
 
     ##### YOUR CODE ENDS HERE ######
 
     return example
+

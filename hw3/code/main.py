@@ -3,8 +3,9 @@ from datasets import load_dataset
 from transformers import AutoTokenizer
 from torch.utils.data import DataLoader
 from transformers import AutoModelForSequenceClassification
-from torch.optim import AdamW
+from torch.optim import AdamW,SGD
 from transformers import get_scheduler
+import torch.nn as nn
 import torch
 from tqdm.auto import tqdm
 import evaluate
@@ -34,18 +35,64 @@ def do_train(args, model, train_dataloader, save_dir="./out"):
     lr_scheduler = get_scheduler(
         name="linear", optimizer=optimizer, num_warmup_steps=0, num_training_steps=num_training_steps
     )
+
     model.train()
     progress_bar = tqdm(range(num_training_steps))
 
     ################################
     ##### YOUR CODE BEGINGS HERE ###
 
+    loss_fun = nn.CrossEntropyLoss()
+
+
+    for epoch in range(args.num_epochs):
+        # correct = 0
+        # total = 0
+        # optimizer.zero_grad()
+        # Reset the learning rate scheduler if required
+        
+
+        for outputs in train_dataloader:
+            correct = 0
+            total = 0
+            input_ids, token_type_ids, attention_mask,label=outputs['input_ids'], outputs['token_type_ids'], outputs['attention_mask'], outputs['labels']
+            input_ids, token_type_ids, attention_mask,label = (input_ids.to(device),
+                                                                token_type_ids.to(device),
+                                                                attention_mask.to(device),
+                                                                label.to(device))
+ 
+            # Forward pass
+            outputs = model(input_ids=input_ids,token_type_ids=token_type_ids, 
+                            attention_mask=attention_mask,labels=label)
+            loss = outputs.loss
+            # Compute loss
+            # loss = loss_fun(pred.logits, label)
+
+            loss.backward()
+            optimizer.step()
+            lr_scheduler.step()
+            optimizer.zero_grad()
+            
+            # Calculate accuracy
+            predicted = torch.argmax(outputs.logits, -1)
+            total += len(label)
+            correct += (predicted == label).sum().item()
+
+            # Display metrics
+            tqdm.write(f"Loss: {loss.item():.4f}, Accuracy: {correct / total:.4f}")
+
+            # Update progress bar
+            progress_bar.update(1)
+
+        print(f"Epoch {epoch + 1}/{args.num_epochs} - Training accuracy: {correct / total:.4f}")
+        lr_scheduler.step()
+    # Closing the progress bar after training
+    progress_bar.close()
     # Implement the training loop --- make sure to use the optimizer and lr_sceduler (learning rate scheduler)
     # Remember that pytorch uses gradient accumumlation so you need to use zero_grad (https://pytorch.org/tutorials/recipes/recipes/zeroing_out_gradients.html)
     # You can use progress_bar.update(1) to see the progress during training
     # You can refer to the pytorch tutorial covered in class for reference
 
-    raise NotImplementedError
 
     ##### YOUR CODE ENDS HERE ######
 
@@ -88,16 +135,42 @@ def do_eval(eval_dataloader, output_dir, out_file):
 def create_augmented_dataloader(args, dataset):
     ################################
     ##### YOUR CODE BEGINGS HERE ###
-
     # Here, 'dataset' is the original dataset. You should return a dataloader called 'train_dataloader' -- this
     # dataloader will be for the original training split augmented with 5k random transformed examples from the training set.
     # You may find it helpful to see how the dataloader was created at other place in this code.
+    def delete_random_word(sentence):
+        words = sentence.split()
+        if len(words) == 1:
+            return sentence
+        random_word = random.choice(words)
+        new_words = [word for word in words if word != random_word]
+        return ' '.join(new_words)
+    
+    sentence=dataset['train']['text']    
+    indices = random.sample(range(len(sentence)), 5000)
+    selected_samples = [sentence[idx] for idx in indices]
+    augmented_samples = [delete_random_word(sentence) for sentence in selected_samples]
 
-    raise NotImplementedError
+    from datasets import concatenate_datasets   
+    a=concatenate_datasets ([a,d]
+    )
+    tokenized_dataset = dataset.map(tokenize_function, batched=True)
+
+    # Prepare dataset for use by model
+    tokenized_dataset = tokenized_dataset.remove_columns(["text"])
+    tokenized_dataset = tokenized_dataset.rename_column("label", "labels")
+    tokenized_dataset.set_format("torch")
+
+
+    train_dataloader = DataLoader(
+        tokenized_dataset,
+        batch_sizes=args.batch_size,    
+        shuffle=True
+    )
 
     ##### YOUR CODE ENDS HERE ######
 
-    return train_dataloader
+    return train_dataloader 
 
 
 # Create a dataloader for the transformed test set
@@ -133,12 +206,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # Arguments
-    parser.add_argument("--train", action="store_true", help="train a model on the training data")
-    parser.add_argument("--train_augmented", action="store_true", help="train a model on the augmented training data")
-    parser.add_argument("--eval", action="store_true", help="evaluate model on the test set")
-    parser.add_argument("--eval_transformed", action="store_true", help="evaluate model on the transformed test set")
+    parser.add_argument("--train", action="store_true",default=True, help="train a model on the training data")
+    parser.add_argument("--train_augmented", action="store_true",default=False, help="train a model on the augmented training data")
+    parser.add_argument("--eval", action="store_true",default=True, help="evaluate model on the test set")
+    parser.add_argument("--eval_transformed", action="store_true",default=False, help="evaluate model on the transformed test set")
     parser.add_argument("--model_dir", type=str, default="./out")
-    parser.add_argument("--debug_train", action="store_true",
+    parser.add_argument("--debug_train", action="store_true",default=False,
                         help="use a subset for training to debug your training loop")
     parser.add_argument("--debug_transformation", action="store_true",
                         help="print a few transformed examples for debugging")
