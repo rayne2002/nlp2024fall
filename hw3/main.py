@@ -3,12 +3,12 @@ from datasets import load_dataset
 from transformers import AutoTokenizer
 from torch.utils.data import DataLoader
 from transformers import AutoModelForSequenceClassification
-from torch.optim import AdamW
+from torch.optim import AdamW,SGD
 from transformers import get_scheduler
 import torch.nn as nn
 import torch
 from tqdm.auto import tqdm
-# import evaluate
+import evaluate
 import random
 import argparse
 from utils import *
@@ -46,33 +46,38 @@ def do_train(args, model, train_dataloader, save_dir="./out"):
 
 
     for epoch in range(args.num_epochs):
-        correct = 0
-        total = 0
-
+        # correct = 0
+        # total = 0
+        # optimizer.zero_grad()
         # Reset the learning rate scheduler if required
-        lr_scheduler.step()
-
-        for input_ids, token_type_ids, attention_mask, label in train_dataloader:
-            input_ids, token_type_ids, attention_mask, label = (input_ids.to(device),
+        
+        # i=0
+        for outputs in train_dataloader:
+            correct = 0
+            total = 0
+            # i+=1
+            # if i==100:
+            #     break
+            input_ids, token_type_ids, attention_mask,label=outputs['input_ids'], outputs['token_type_ids'], outputs['attention_mask'], outputs['labels']
+            input_ids, token_type_ids, attention_mask,label = (input_ids.to(device),
                                                                 token_type_ids.to(device),
                                                                 attention_mask.to(device),
                                                                 label.to(device))
-
+ 
             # Forward pass
-            pred = model(input_ids, token_type_ids, attention_mask)
-
+            outputs = model(input_ids=input_ids,token_type_ids=token_type_ids, 
+                            attention_mask=attention_mask,labels=label)
+            loss = outputs.loss
             # Compute loss
-            loss = loss_fun(pred, label)
+            # loss = loss_fun(pred.logits, label)
 
-            # Backward pass
             loss.backward()
-
-            # Update model parameters
             optimizer.step()
+            lr_scheduler.step()
             optimizer.zero_grad()
-
+            
             # Calculate accuracy
-            _, predicted = torch.max(pred.data, 1)
+            predicted = torch.argmax(outputs.logits, -1)
             total += len(label)
             correct += (predicted == label).sum().item()
 
@@ -82,8 +87,8 @@ def do_train(args, model, train_dataloader, save_dir="./out"):
             # Update progress bar
             progress_bar.update(1)
 
-        print(f"Epoch {epoch + 1}/{args.num_epochs} - Training accuracy: {correct / total:.4f}")
-
+        # print(f"Epoch {epoch + 1}/{args.num_epochs} - Training accuracy: {correct / total:.4f}")
+        lr_scheduler.step()
     # Closing the progress bar after training
     progress_bar.close()
     # Implement the training loop --- make sure to use the optimizer and lr_sceduler (learning rate scheduler)
@@ -91,7 +96,6 @@ def do_train(args, model, train_dataloader, save_dir="./out"):
     # You can use progress_bar.update(1) to see the progress during training
     # You can refer to the pytorch tutorial covered in class for reference
 
-    # raise NotImplementedError
 
     ##### YOUR CODE ENDS HERE ######
 
@@ -134,16 +138,55 @@ def do_eval(eval_dataloader, output_dir, out_file):
 def create_augmented_dataloader(args, dataset):
     ################################
     ##### YOUR CODE BEGINGS HERE ###
-
     # Here, 'dataset' is the original dataset. You should return a dataloader called 'train_dataloader' -- this
     # dataloader will be for the original training split augmented with 5k random transformed examples from the training set.
     # You may find it helpful to see how the dataloader was created at other place in this code.
+    def delete_random_word(sentence):
+        words = sentence.split()
+        if len(words) == 1:
+            return sentence
+        random_word = random.choice(words)
+        new_words = [word for word in words if word != random_word]
+        return ' '.join(new_words)
+    
+    sentence=dataset['train']['text']    
 
-    raise NotImplementedError
+    # Select 5k random samples from the training set for augmentation
+    num_augmented_samples = 5000
+    if len(sentence) < num_augmented_samples:
+        num_augmented_samples = len(sentence)
+
+    indices = random.sample(range(len(sentence)), num_augmented_samples)
+    selected_samples = [sentence[idx] for idx in indices]
+
+
+    augmented_samples = [delete_random_word(sentence) for sentence in selected_samples]
+
+    # Create a new dataset with both original and augmented samples
+    original_samples = [{"text": sentence, "label": dataset['train']['label'][i]} for i, sentence in enumerate(sentence)]
+    augmented_data = [{"text": sentence, "label": (dataset['train']['label'])} for sentence in augmented_samples]
+    
+    # Combine original and augmented samples
+    combined_dataset = original_samples + augmented_data
+    
+    # Tokenize the combined dataset
+    def tokenize_function(example):
+        return tokenizer(example['text'], padding="max_length", truncation=True)
+    
+    tokenized_dataset = dataset.map(tokenize_function, batched=True)
+    tokenized_dataset = tokenized_dataset.remove_columns(["text"])
+    tokenized_dataset = tokenized_dataset.rename_column("label", "labels")
+    tokenized_dataset.set_format("torch")
+    train_dataloader = DataLoader(
+        tokenized_dataset["train"],
+        batch_size=args.batch_size,
+        shuffle=True
+    )
+
 
     ##### YOUR CODE ENDS HERE ######
 
-    return train_dataloader
+    return train_dataloader 
 
 
 # Create a dataloader for the transformed test set
@@ -179,12 +222,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # Arguments
-    parser.add_argument("--train", action="store_true", help="train a model on the training data")
-    parser.add_argument("--train_augmented", action="store_true", help="train a model on the augmented training data")
-    parser.add_argument("--eval", action="store_true", help="evaluate model on the test set")
-    parser.add_argument("--eval_transformed", action="store_true", help="evaluate model on the transformed test set")
-    parser.add_argument("--model_dir", type=str, default="./out")
-    parser.add_argument("--debug_train", action="store_true",
+    parser.add_argument("--train", action="store_true",default=False, help="train a model on the training data")
+    parser.add_argument("--train_augmented", action="store_true",default=False, help="train a model on the augmented training data")
+    parser.add_argument("--eval", action="store_true",default=False, help="evaluate model on the test set")
+    parser.add_argument("--eval_transformed", action="store_true",default=True, help="evaluate model on the transformed test set")
+    parser.add_argument("--model_dir", type=str, default="./out_augmented/")
+    parser.add_argument("--debug_train", action="store_true",default=False,
                         help="use a subset for training to debug your training loop")
     parser.add_argument("--debug_transformation", action="store_true",
                         help="print a few transformed examples for debugging")
@@ -201,7 +244,7 @@ if __name__ == "__main__":
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
     # Load the tokenizer
-    tokenizer = AutoTokenizer.from_pretrained("../../../Model/bert-base-uncased")
+    tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
 
     # Tokenize the dataset
     dataset = load_dataset("imdb")
@@ -239,7 +282,7 @@ if __name__ == "__main__":
 
     # Train model on the augmented training dataset
     if args.train_augmented:
-        train_dataloader = create_augmented_dataloader(args, dataset)
+        train_dataloader = create_augmented_dataloader(args,dataset)
         model = AutoModelForSequenceClassification.from_pretrained("bert-base-cased", num_labels=2)
         model.to(device)
         do_train(args, model, train_dataloader, save_dir="./out_augmented")
